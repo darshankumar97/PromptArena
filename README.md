@@ -282,18 +282,6 @@ PromptArena/
 
 ---
 
-## Submission checklist (assignment §9–10)
-
-| Item | Location |
-|------|----------|
-| Application source | `backend/`, `frontend/` |
-| README (setup, architecture, tradeoffs, judging, gaps) | This file |
-| Demo evidence | Record the quick start flow above (screen recording or screenshots) |
-| Environment sample | `backend/.env.example`, `frontend/.env.local.example` |
-| Seed / test data | `flask seed-demo`; `pytest tests/` |
-
----
-
 ## License / attribution
 
 Built for the Poiro intern assignment. Backend and frontend are MIT-style sample code for review purposes.
