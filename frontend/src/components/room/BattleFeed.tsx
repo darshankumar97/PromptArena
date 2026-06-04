@@ -2,6 +2,7 @@
 
 import { CampaignsSection } from "@/components/room/CampaignsSection";
 import { SubmissionForm } from "@/components/room/SubmissionForm";
+import { Card } from "@/components/ui/Card";
 import { api, ApiRequestError } from "@/lib/api";
 import { isSessionExpiredError } from "@/lib/session-expired";
 import { canSubmit, isHost } from "@/lib/room-helpers";
@@ -85,21 +86,19 @@ export function BattleFeed({
   };
 
   return (
-    <main className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
+    <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4 md:p-6">
       {round ? (
         <>
-          <div className="rounded-xl border border-zinc-800/60 bg-gradient-to-br from-zinc-900/80 to-zinc-950/80 p-6">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              Battle theme
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-50">
+          <Card padding="lg">
+            <p className="text-xs font-medium text-[var(--muted)]">Battle theme</p>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--foreground)]">
               {round.battle_theme}
             </h2>
-            <div className="mt-3 flex flex-wrap gap-4 text-xs text-zinc-500">
+            <div className="mt-3 flex flex-wrap gap-3 text-xs text-[var(--muted)]">
               <span>Round {round.round_number}</span>
-              <span className="capitalize">Round: {round.status}</span>
+              <span className="capitalize">{round.status}</span>
             </div>
-          </div>
+          </Card>
 
           {showForm && (
             <SubmissionForm
@@ -110,25 +109,30 @@ export function BattleFeed({
           )}
 
           {host && snapshot.room.status === "prompting" && (
-            <p className="rounded-lg border border-zinc-800/60 bg-zinc-900/30 px-4 py-3 text-sm text-zinc-500">
-              You are the host — guide the room and lock submissions when ready.
+            <p className="text-sm text-[var(--muted-foreground)]">
+              You are the host. Lock submissions when players are ready.
             </p>
           )}
 
-          <CampaignsSection
-            snapshot={snapshot}
-            user={user}
-            onScore={handleScore}
-            onSelectWinner={handleWinner}
-            onRetry={handleRetry}
-            scoring={actionLoading === "score"}
-            selecting={actionLoading === "winner"}
-          />
+          <div className="space-y-4">
+            <h2 className="text-xs font-medium text-[var(--muted)]">Campaigns</h2>
+            <CampaignsSection
+              snapshot={snapshot}
+              user={user}
+              onScore={handleScore}
+              onSelectWinner={handleWinner}
+              onRetry={handleRetry}
+              scoring={actionLoading === "score"}
+              selecting={actionLoading === "winner"}
+            />
+          </div>
         </>
       ) : (
-        <p className="text-sm text-zinc-500">
-          Waiting for the host to start the battle…
-        </p>
+        <Card padding="lg" className="text-center">
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Waiting for the host to start the round.
+          </p>
+        </Card>
       )}
     </main>
   );

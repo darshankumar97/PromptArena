@@ -7,6 +7,8 @@ import { useCallback, useEffect } from "react";
 import { BattleFeed } from "@/components/room/BattleFeed";
 import { RoomSidebar } from "@/components/room/RoomSidebar";
 import { TopBar } from "@/components/room/TopBar";
+import { Alert } from "@/components/ui/Alert";
+import { Spinner } from "@/components/ui/Spinner";
 import { useRoomSession } from "@/hooks/useRoomSession";
 import { api } from "@/lib/api";
 import { saveLastRoomCode } from "@/lib/auth-storage";
@@ -58,21 +60,26 @@ export function RoomView({ roomCode }: { roomCode: string }) {
 
   if (!hydrated || !accessToken) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-400" />
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
+        <Spinner size="lg" />
       </div>
     );
   }
 
   if (!snapshot && socketStatus !== "authenticated") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-zinc-950 px-6">
-        <span className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-400" />
-        <p className="text-sm text-zinc-500">Joining room {roomCode}…</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--background)] px-6">
+        <Spinner size="lg" />
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Joining room {roomCode}…
+        </p>
         {(socketError || roomError) && (
-          <div className="max-w-md rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 text-center text-sm text-red-300">
-            {socketError || roomError}
-            <Link href="/" className="mt-2 block text-indigo-400 hover:underline">
+          <div className="w-full max-w-sm space-y-3 text-center">
+            <Alert variant="error">{socketError || roomError}</Alert>
+            <Link
+              href="/"
+              className="text-sm text-[var(--accent)] hover:underline"
+            >
               Back to home
             </Link>
           </div>
@@ -83,23 +90,24 @@ export function RoomView({ roomCode }: { roomCode: string }) {
 
   if (!snapshot) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-500">
-        Loading room…
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--background)]">
+        <Spinner />
+        <p className="text-sm text-[var(--muted)]">Loading room…</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col bg-zinc-950">
+    <div className="flex h-screen flex-col bg-[var(--background)]">
       <TopBar snapshot={snapshot} socketStatus={socketStatus} />
 
       {(roomError || socketError) && (
-        <div className="border-b border-amber-500/20 bg-amber-500/5 px-5 py-2 text-center text-xs text-amber-200/90">
-          {roomError || socketError}
+        <div className="border-b border-[var(--border-subtle)] px-4 py-2 md:px-5">
+          <Alert variant="warning">{roomError || socketError}</Alert>
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <RoomSidebar
           snapshot={snapshot}
           activity={activity}

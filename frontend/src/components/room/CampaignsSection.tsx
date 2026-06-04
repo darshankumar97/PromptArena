@@ -1,6 +1,7 @@
 "use client";
 
 import { CampaignCard } from "@/components/room/CampaignCard";
+import { Card } from "@/components/ui/Card";
 import {
   campaignsEmptyCopy,
   hasJudgeableSubmissions,
@@ -36,15 +37,19 @@ export function CampaignsSection({
   if (round.submissions.length === 0) {
     const copy = campaignsEmptyCopy(snapshot.room.status, submittedCount);
     return (
-      <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/20 py-12 text-center">
-        <p className="text-sm font-medium text-zinc-400">{copy.title}</p>
-        <p className="mx-auto mt-2 max-w-md text-sm text-zinc-600">{copy.description}</p>
-      </div>
+      <Card padding="lg" className="text-center">
+        <p className="text-sm font-medium text-[var(--muted-foreground)]">
+          {copy.title}
+        </p>
+        <p className="mx-auto mt-2 max-w-md text-sm text-[var(--muted)]">
+          {copy.description}
+        </p>
+      </Card>
     );
   }
 
   return (
-    <>
+    <div className="space-y-4">
       {round.submissions.map((sub) => (
         <CampaignCard
           key={sub.user_id}
@@ -54,13 +59,11 @@ export function CampaignsSection({
           isHost={host}
           onScore={allowJudging ? onScore : undefined}
           onSelectWinner={allowJudging ? onSelectWinner : undefined}
-          onRetry={
-            onRetry && sub.user_id === user?.id ? onRetry : undefined
-          }
+          onRetry={onRetry && sub.user_id === user?.id ? onRetry : undefined}
           scoring={scoring}
           selecting={selecting}
         />
       ))}
-    </>
+    </div>
   );
 }

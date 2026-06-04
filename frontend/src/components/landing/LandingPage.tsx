@@ -3,7 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Spinner } from "@/components/ui/Spinner";
 import { api, ApiRequestError } from "@/lib/api";
 import { loadLastRoomCode } from "@/lib/auth-storage";
 import { consumeSessionExpiredMessage } from "@/lib/session-expired";
@@ -89,55 +93,52 @@ export function LandingPage() {
 
   if (!hydrated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-400" />
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
+        <Spinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-zinc-950">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 50% at 50% -20%, rgb(99 102 241 / 0.25), transparent), radial-gradient(ellipse 60% 40% at 100% 50%, rgb(139 92 246 / 0.12), transparent)",
-        }}
-      />
-
-      <div className="relative mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-16">
-        <div className="mb-10 text-center">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-indigo-400/80">
-            AI Creative Battle Room
-          </p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-zinc-50">
+    <div className="min-h-screen bg-[var(--background)]">
+      <header className="border-b border-[var(--border-subtle)]">
+        <div className="mx-auto flex h-14 max-w-5xl items-center px-6">
+          <span className="text-sm font-semibold text-[var(--foreground)]">
             PromptArena
+          </span>
+        </div>
+      </header>
+
+      <main className="mx-auto flex max-w-md flex-col px-6 py-16">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            AI creative battles
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-zinc-500">
-            Enter the arena. Submit one prompt. Watch AI campaigns collide in
-            realtime. One round. One winner.
+          <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
+            Create or join a room, submit one prompt per round, and compete in
+            realtime. The host locks submissions and picks a winner.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/50 p-6 shadow-2xl shadow-black/40 backdrop-blur-sm">
-          <label className="block text-xs font-medium text-zinc-500">
+        <Card padding="lg">
+          <label className="block text-xs font-medium text-[var(--muted-foreground)]">
             Display name
           </label>
-          <input
+          <Input
+            className="mt-1.5"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Your battle name"
-            className="mt-2 w-full rounded-lg border border-zinc-700/80 bg-zinc-950/80 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+            placeholder="How others see you"
           />
 
           {user && (
-            <p className="mt-3 text-xs text-zinc-500">
+            <p className="mt-3 text-xs text-[var(--muted)]">
               Signed in as{" "}
-              <span className="text-zinc-300">{user.display_name}</span>
+              <span className="text-[var(--foreground)]">{user.display_name}</span>
               <button
                 type="button"
                 onClick={() => logout()}
-                className="ml-2 text-indigo-400 hover:text-indigo-300"
+                className="ml-2 text-[var(--accent)] hover:underline"
               >
                 Switch user
               </button>
@@ -145,15 +146,15 @@ export function LandingPage() {
           )}
 
           {sessionNotice && (
-            <p className="mt-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+            <Alert variant="warning" className="mt-4">
               {sessionNotice}
-            </p>
+            </Alert>
           )}
 
           {(actionError || authError) && (
-            <p className="mt-4 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-300">
+            <Alert variant="error" className="mt-4">
               {actionError || authError}
-            </p>
+            </Alert>
           )}
 
           <div className="mt-6 space-y-3">
@@ -165,21 +166,23 @@ export function LandingPage() {
               Create room
             </Button>
 
-            <div className="relative py-2">
+            <div className="relative py-1">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-zinc-800" />
+                <div className="w-full border-t border-[var(--border)]" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-zinc-900/50 px-2 text-zinc-600">or join</span>
+              <div className="relative flex justify-center">
+                <span className="bg-[var(--card)] px-2 text-xs text-[var(--muted)]">
+                  or join with code
+                </span>
               </div>
             </div>
 
-            <input
+            <Input
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
               placeholder="Room code"
               maxLength={8}
-              className="w-full rounded-lg border border-zinc-700/80 bg-zinc-950/80 px-4 py-3 text-center font-mono text-sm tracking-widest text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500/50 focus:outline-none"
+              className="text-center font-mono tracking-widest"
             />
             <Button
               variant="secondary"
@@ -193,20 +196,19 @@ export function LandingPage() {
             {lastRoom && (
               <Button
                 variant="ghost"
-                className="w-full text-zinc-400"
+                className="w-full"
                 onClick={() => router.push(`/room/${lastRoom}`)}
               >
-                Rejoin last room ({lastRoom})
+                Rejoin {lastRoom}
               </Button>
             )}
           </div>
-        </div>
+        </Card>
 
-        <p className="mt-8 text-center text-xs text-zinc-600">
-          Backend must be running at{" "}
-          {process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}
+        <p className="mt-6 text-center text-xs text-[var(--muted)]">
+          API: {process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}
         </p>
-      </div>
+      </main>
     </div>
   );
 }
