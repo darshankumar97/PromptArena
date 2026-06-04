@@ -4,7 +4,8 @@
 
 Or use:  .\\start.ps1
 """
-
+import eventlet
+eventlet.monkey_patch()
 from __future__ import annotations
 
 import os
