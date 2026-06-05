@@ -14,11 +14,28 @@ def _csv_origins(value: str) -> list[str]:
     return [origin.strip() for origin in value.split(",") if origin.strip()]
 
 
+def _normalize_database_url(value: str | None) -> str | None:
+    if not value:
+        return None
+    if not value.startswith("sqlite:///"):
+        return value
+
+    sqlite_path = value[len("sqlite:///") :]
+    if sqlite_path == ":memory:":
+        return value
+
+    candidate = Path(sqlite_path)
+    if candidate.is_absolute():
+        return value
+
+    resolved_path = (_BACKEND_DIR / sqlite_path).resolve()
+    return f"sqlite:///{resolved_path.as_posix()}"
+
+
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        f"sqlite:///{(_BACKEND_DIR / 'promptarena.db').as_posix()}",
+    SQLALCHEMY_DATABASE_URI = _normalize_database_url(os.getenv("DATABASE_URL")) or (
+        f"sqlite:///{(_BACKEND_DIR / 'promptarena.db').as_posix()}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {

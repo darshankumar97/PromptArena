@@ -1,3 +1,4 @@
+import API_BASE from "@/config/api";
 import {
   handleSessionExpired,
   isUnauthorizedResponse,
@@ -29,10 +30,6 @@ export interface SubmitResponse {
   generation_job: { id: number; status: string };
   snapshot: RoomSnapshot;
 }
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-  "http://localhost:5000";
 
 export class ApiRequestError extends Error {
   code: string;
@@ -71,7 +68,7 @@ function headers(token?: string): HeadersInit {
 
 export const api = {
   async register(displayName: string): Promise<AuthTokens> {
-    const res = await fetch(`${API_URL}/api/auth/register`, {
+    const res = await fetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
       headers: headers(),
       body: JSON.stringify({ display_name: displayName }),
@@ -80,14 +77,14 @@ export const api = {
   },
 
   async me(token: string): Promise<{ user: User }> {
-    const res = await fetch(`${API_URL}/api/auth/me`, {
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
       headers: headers(token),
     });
     return parseJson(res);
   },
 
   async createRoom(token: string): Promise<{ room: Room }> {
-    const res = await fetch(`${API_URL}/api/rooms`, {
+    const res = await fetch(`${API_BASE}/api/rooms`, {
       method: "POST",
       headers: headers(token),
     });
@@ -98,7 +95,7 @@ export const api = {
     participant: unknown;
     snapshot: RoomSnapshot;
   }> {
-    const res = await fetch(`${API_URL}/api/rooms/id/${roomId}/join`, {
+    const res = await fetch(`${API_BASE}/api/rooms/id/${roomId}/join`, {
       method: "POST",
       headers: headers(token),
     });
@@ -109,7 +106,7 @@ export const api = {
     token: string,
     roomId: number,
   ): Promise<{ snapshot: RoomSnapshot }> {
-    const res = await fetch(`${API_URL}/api/rooms/id/${roomId}/snapshot`, {
+    const res = await fetch(`${API_BASE}/api/rooms/id/${roomId}/snapshot`, {
       headers: headers(token),
     });
     return parseJson(res);
@@ -121,7 +118,7 @@ export const api = {
     afterId = 0,
   ): Promise<{ events: ActivityEvent[] }> {
     const res = await fetch(
-      `${API_URL}/api/rooms/id/${roomId}/activity?after_id=${afterId}&limit=50`,
+      `${API_BASE}/api/rooms/id/${roomId}/activity?after_id=${afterId}&limit=50`,
       { headers: headers(token) },
     );
     return parseJson(res);
@@ -134,7 +131,7 @@ export const api = {
     promptText: string,
   ): Promise<SubmitResponse> {
     const res = await fetch(
-      `${API_URL}/api/rooms/id/${roomId}/round/${roundId}/submit`,
+      `${API_BASE}/api/rooms/id/${roomId}/round/${roundId}/submit`,
       {
         method: "POST",
         headers: headers(token),
@@ -149,7 +146,7 @@ export const api = {
     roomId: number,
     battleTheme: string,
   ): Promise<RoundMutationResponse> {
-    const res = await fetch(`${API_URL}/api/rooms/id/${roomId}/round/start`, {
+    const res = await fetch(`${API_BASE}/api/rooms/id/${roomId}/round/start`, {
       method: "POST",
       headers: headers(token),
       body: JSON.stringify({ battle_theme: battleTheme }),
@@ -163,7 +160,7 @@ export const api = {
     roundId: number,
   ): Promise<RoundMutationResponse> {
     const res = await fetch(
-      `${API_URL}/api/rooms/id/${roomId}/round/${roundId}/lock`,
+      `${API_BASE}/api/rooms/id/${roomId}/round/${roundId}/lock`,
       { method: "POST", headers: headers(token) },
     );
     return parseJson<RoundMutationResponse>(res);
@@ -176,7 +173,7 @@ export const api = {
     submissionId: number,
   ): Promise<RoundMutationResponse> {
     const res = await fetch(
-      `${API_URL}/api/rooms/id/${roomId}/round/${roundId}/winner`,
+      `${API_BASE}/api/rooms/id/${roomId}/round/${roundId}/winner`,
       {
         method: "POST",
         headers: headers(token),
@@ -193,7 +190,7 @@ export const api = {
     score: number,
   ): Promise<{ submission: SubmissionSummary; snapshot: RoomSnapshot }> {
     const res = await fetch(
-      `${API_URL}/api/rooms/id/${roomId}/submissions/${submissionId}/score`,
+      `${API_BASE}/api/rooms/id/${roomId}/submissions/${submissionId}/score`,
       {
         method: "POST",
         headers: headers(token),
@@ -209,7 +206,7 @@ export const api = {
     submissionId: number,
   ): Promise<{ generation_job: { id: number; status: string }; snapshot: RoomSnapshot }> {
     const res = await fetch(
-      `${API_URL}/api/rooms/id/${roomId}/submissions/${submissionId}/retry`,
+      `${API_BASE}/api/rooms/id/${roomId}/submissions/${submissionId}/retry`,
       { method: "POST", headers: headers(token) },
     );
     return parseJson(res);
@@ -217,5 +214,5 @@ export const api = {
 };
 
 export function getApiUrl(): string {
-  return API_URL;
+  return API_BASE;
 }

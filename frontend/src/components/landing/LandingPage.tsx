@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
+import API_BASE from "@/config/api";
 import { api, ApiRequestError } from "@/lib/api";
 import { loadLastRoomCode } from "@/lib/auth-storage";
 import { consumeSessionExpiredMessage } from "@/lib/session-expired";
@@ -206,7 +207,7 @@ export function LandingPage() {
         </Card>
 
         <p className="mt-6 text-center text-xs text-[var(--muted)]">
-          API: {process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}
+          API: {API_BASE}
         </p>
       </main>
     </div>

@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client";
 
-import { getApiUrl } from "@/lib/api";
+import API_BASE from "@/config/api";
 import {
   handleSessionExpired,
   isUnauthorizedResponse,
@@ -10,7 +10,7 @@ let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io(getApiUrl(), {
+    socket = io(API_BASE, {
       autoConnect: false,
       transports: ["websocket", "polling"],
       reconnection: true,

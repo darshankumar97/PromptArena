@@ -16,6 +16,7 @@ def create_app(config_object: type | None = None) -> Flask:
     app.config.from_object(config)
 
     _init_extensions(app)
+    _ensure_database_schema(app)
     register_blueprints(app)
     register_socket_handlers()
     _register_error_handlers(app)
@@ -23,6 +24,18 @@ def create_app(config_object: type | None = None) -> Flask:
     _register_shutdown(app)
 
     return app
+
+
+def _ensure_database_schema(flask_app: Flask) -> None:
+    """Create tables when missing (idempotent). Required on fresh deploys (e.g. Render).
+
+    Schema changes are not migrated automatically; use init-db after model updates
+    in development or add Alembic for production migrations later.
+    """
+    import app.models  # noqa: F401 — register all models with SQLAlchemy metadata
+
+    with flask_app.app_context():
+        db.create_all()
 
 
 def _register_shutdown(_app: Flask) -> None:
