@@ -90,9 +90,20 @@ export function RoomView({ roomCode }: { roomCode: string }) {
 
   if (!snapshot) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--background)]">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--background)] px-6">
         <Spinner />
         <p className="text-sm text-[var(--muted)]">Loading room…</p>
+        {(socketError || roomError) && (
+          <div className="w-full max-w-sm space-y-3 text-center">
+            <Alert variant="error">{socketError || roomError}</Alert>
+            <Link
+              href="/"
+              className="text-sm text-[var(--accent)] hover:underline"
+            >
+              Back to home
+            </Link>
+          </div>
+        )}
       </div>
     );
   }

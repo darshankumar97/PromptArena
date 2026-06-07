@@ -47,6 +47,29 @@ def get_room_by_code(code: str):
     return jsonify(summary)
 
 
+@rooms_bp.post("/<code>/join")
+@jwt_required()
+def join_room_by_code(code: str):
+    """Join (or re-enter) a room by lobby code; returns a personal snapshot."""
+    user_id = int(get_jwt_identity())
+    user = AuthService.get_user(user_id)
+    room = RoomService.get_by_code(code)
+
+    participant, is_new_join = RoomService.enter_room(room=room, user=user)
+    participant.connection_status = ConnectionStatus.ONLINE
+    db.session.commit()
+    if is_new_join:
+        notify_room_sync(room.id)
+    snapshot = SnapshotService.build(room.id, viewer_user_id=user_id)
+    return jsonify(
+        {
+            "participant": participant.to_dict(),
+            "snapshot": snapshot,
+            "reconnected": not is_new_join,
+        }
+    ), 200
+
+
 @rooms_bp.get("/id/<int:room_id>")
 @jwt_required()
 def get_room_detail(room_id: int):

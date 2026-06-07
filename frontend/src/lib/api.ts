@@ -102,6 +102,22 @@ export const api = {
     return parseJson(res);
   },
 
+  async joinRoomByCode(
+    token: string,
+    roomCode: string,
+  ): Promise<{
+    participant: unknown;
+    snapshot: RoomSnapshot;
+    reconnected: boolean;
+  }> {
+    const code = roomCode.trim().toUpperCase();
+    const res = await fetch(`${API_BASE}/api/rooms/${code}/join`, {
+      method: "POST",
+      headers: headers(token),
+    });
+    return parseJson(res);
+  },
+
   async getSnapshot(
     token: string,
     roomId: number,

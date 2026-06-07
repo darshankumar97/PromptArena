@@ -19,6 +19,14 @@ import { useRoomStore } from "@/stores/roomStore";
 import { useSocketStore } from "@/stores/socketStore";
 import type { ActivityEvent, RoomSnapshot } from "@/types";
 
+const log = (message: string, detail?: unknown) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.info(`[room-session] ${message}`, detail ?? "");
+  } else {
+    console.info(`[room-session] ${message}`);
+  }
+};
+
 export function useRoomSession(roomCode: string) {
   const accessToken = useAuthStore((s) => s.accessToken);
   const applySnapshot = useRoomStore((s) => s.applySnapshot);
@@ -55,8 +63,18 @@ export function useRoomSession(roomCode: string) {
       resetRoom();
       setSocketStatus("connecting");
       setRoomError(null);
+      log("setup started", { roomCode });
 
       try {
+        const loadSnapshotViaRest = async () => {
+          log("rest join requested", { roomCode });
+          const { snapshot } = await api.joinRoomByCode(accessToken, roomCode);
+          if (cancelled) return;
+          log("rest join acknowledged", { roomId: snapshot.room.id });
+          applySnapshot(snapshot);
+          roomIdRef.current = snapshot.room.id;
+        };
+
         await connectSocket();
         if (cancelled) return;
 
@@ -66,9 +84,14 @@ export function useRoomSession(roomCode: string) {
 
         setSocketStatus("authenticated");
 
+        const restJoinPromise = loadSnapshotViaRest().catch((e) => {
+          log("rest join failed", e instanceof Error ? e.message : e);
+        });
+
         const socket = getSocket();
 
         socket.on("room_snapshot", (payload: RoomSnapshot) => {
+          log("room_snapshot received", { roomId: payload.room.id });
           applySnapshot(payload);
           roomIdRef.current = payload.room.id;
         });
@@ -125,11 +148,21 @@ export function useRoomSession(roomCode: string) {
               );
               setActivity(events);
               await refreshPersonalSnapshot(snap.room.id);
+              log("room state ready", { roomId: snap.room.id, source: "snapshot" });
               return;
             }
             await new Promise((r) => setTimeout(r, 200));
           }
-          setRoomError("Timed out loading room state. Try refreshing again.");
+          await restJoinPromise;
+          const snap = useRoomStore.getState().snapshot;
+          if (snap?.room.id) {
+            roomIdRef.current = snap.room.id;
+            log("room state ready", { roomId: snap.room.id, source: "rest-fallback" });
+            return;
+          }
+          const message = "Timed out loading room state. Try refreshing again.";
+          log("timeout", { roomCode, source: "waitForRoom" });
+          setRoomError(message);
         };
         await waitForRoom();
       } catch (e) {

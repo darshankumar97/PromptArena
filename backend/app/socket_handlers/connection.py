@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from flask import request
 from flask_jwt_extended import decode_token
 from flask_socketio import disconnect, emit, join_room, leave_room
@@ -14,6 +16,8 @@ from app.services.snapshot_service import SnapshotService
 from app.socket_handlers.broadcast import notify_room_sync, socket_room_name
 from extensions import db, socketio
 
+logger = logging.getLogger(__name__)
+
 _connected_users: dict[str, int] = {}
 
 
@@ -25,6 +29,7 @@ def get_socket_user_id() -> int | None:
 def register_connection_handlers() -> None:
     @socketio.on("connect")
     def on_connect():
+        logger.info("socket connected sid=%s", request.sid)
         emit("connected", {"sid": request.sid})
 
     @socketio.on("disconnect")
@@ -61,6 +66,7 @@ def register_connection_handlers() -> None:
 
         user = AuthService.get_user(user_id)
         _connected_users[request.sid] = user.id
+        logger.info("socket authenticated sid=%s user_id=%s", request.sid, user.id)
         emit("authenticated", {"user": user.to_dict()})
 
     @socketio.on("join_room")
@@ -75,11 +81,19 @@ def register_connection_handlers() -> None:
             emit("error", {"code": "VALIDATION_ERROR", "message": "room_code is required"})
             return
 
+        logger.info("socket join_room requested sid=%s user_id=%s code=%s", request.sid, user_id, code)
+
         user = AuthService.get_user(user_id)
-        room = RoomService.get_by_code(code)
         try:
+            room = RoomService.get_by_code(code)
             participant, is_new_join = RoomService.enter_room(room=room, user=user)
         except AppError as exc:
+            logger.warning(
+                "socket join_room rejected sid=%s code=%s code_err=%s",
+                request.sid,
+                code,
+                exc.code,
+            )
             emit("error", {"code": exc.code, "message": exc.message})
             return
 
@@ -87,15 +101,17 @@ def register_connection_handlers() -> None:
         db.session.commit()
 
         join_room(socket_room_name(room.id))
-        if is_new_join:
-            notify_room_sync(room.id)
-        else:
-            emit(
-                "room_snapshot",
-                SnapshotService.build(room.id, viewer_user_id=user.id),
-            )
+        snapshot = SnapshotService.build(room.id, viewer_user_id=user.id)
+        emit("room_snapshot", snapshot)
+        logger.info(
+            "socket join_room acknowledged sid=%s room_id=%s is_new_join=%s",
+            request.sid,
+            room.id,
+            is_new_join,
+        )
+        if not is_new_join:
             emit("room_reconnected", {"participant": participant.to_dict()})
-            notify_room_sync(room.id, skip_sid=request.sid)
+        notify_room_sync(room.id, skip_sid=request.sid)
 
     @socketio.on("leave_room")
     def on_leave_room(data):

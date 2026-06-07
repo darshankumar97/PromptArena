@@ -29,16 +29,26 @@ export function disconnectSocket(): void {
   }
 }
 
+const log = (message: string, detail?: unknown) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.info(`[socket] ${message}`, detail ?? "");
+  } else {
+    console.info(`[socket] ${message}`);
+  }
+};
+
 export function connectSocket(): Promise<void> {
   const s = getSocket();
   if (s.connected) return Promise.resolve();
 
   return new Promise((resolve, reject) => {
     const onConnect = () => {
+      log("connected", { id: s.id });
       cleanup();
       resolve();
     };
     const onError = (err: Error) => {
+      log("connect_error", err.message);
       cleanup();
       reject(err);
     };
@@ -60,6 +70,7 @@ export function authenticateSocket(accessToken: string): Promise<void> {
     }, 10000);
 
     const onAuth = () => {
+      log("authenticated");
       clearTimeout(timeout);
       s.off("error", onErr);
       resolve();
@@ -83,10 +94,13 @@ export function authenticateSocket(accessToken: string): Promise<void> {
 
     s.once("authenticated", onAuth);
     s.on("error", onErr);
+    log("authenticate requested");
     s.emit("authenticate", { access_token: accessToken });
   });
 }
 
 export function joinRoomSocket(roomCode: string): void {
-  getSocket().emit("join_room", { room_code: roomCode.toUpperCase() });
+  const code = roomCode.toUpperCase();
+  log("join_room requested", { room_code: code });
+  getSocket().emit("join_room", { room_code: code });
 }

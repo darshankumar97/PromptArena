@@ -78,6 +78,8 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    # Gunicorn on Render uses --worker-class eventlet; must match Flask-SocketIO async_mode.
+    SOCKETIO_ASYNC_MODE = os.getenv("SOCKETIO_ASYNC_MODE", "eventlet")
 
 
 class TestingConfig(Config):
