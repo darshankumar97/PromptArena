@@ -36,6 +36,8 @@ def _ensure_database_schema(flask_app: Flask) -> None:
 
     with flask_app.app_context():
         db.create_all()
+        table_names = sorted(db.metadata.tables.keys())
+        flask_app.logger.info("Database schema ready (%d tables): %s", len(table_names), ", ".join(table_names))
 
 
 def _register_shutdown(_app: Flask) -> None:

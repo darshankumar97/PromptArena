@@ -54,10 +54,8 @@ Health: http://localhost:5000/api/health
 ### 2. Frontend
 
 ```bash
-cd frontend
-npm install --include=dev
-copy .env.local.example .env.local
-npm run dev
+
+
 ```
 
 UI: http://localhost:3000

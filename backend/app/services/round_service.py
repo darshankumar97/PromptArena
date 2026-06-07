@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
@@ -18,6 +20,8 @@ from app.services.activity_service import ActivityService
 from app.services.room_service import RoomService
 from extensions import db
 
+
+logger = logging.getLogger(__name__)
 
 class RoundService:
     MAX_PROMPT_CHARS = 10_000
@@ -58,14 +62,34 @@ class RoundService:
         RoundService._require_host(room_id, host_user_id)
 
         room = RoomService.get_by_id(room_id)
+        active_members = RoomService.list_active_participants(room_id)
+        logger.info(
+            "start_round request: room_id=%s host_user_id=%s status=%s active_members=%s battle_theme=%r deadline_seconds=%s",
+            room_id,
+            host_user_id,
+            room.status.value,
+            len(active_members),
+            battle_theme,
+            deadline_seconds,
+        )
+
         if room.status != RoomStatus.LOBBY:
+            logger.warning(
+                "start_round rejected: invalid room state %s for room_id=%s",
+                room.status.value,
+                room_id,
+            )
             raise ConflictError(
                 "Round can only be started from the lobby",
                 code="INVALID_ROOM_STATE",
             )
 
-        active_members = RoomService.list_active_participants(room_id)
         if len(active_members) < 2:
+            logger.warning(
+                "start_round rejected: not enough active players (%s) for room_id=%s",
+                len(active_members),
+                room_id,
+            )
             raise ConflictError(
                 "Need at least two players to start",
                 code="NOT_ENOUGH_PLAYERS",
@@ -103,6 +127,12 @@ class RoundService:
         db.session.flush()
         db.session.commit()
         db.session.refresh(round_)
+        logger.info(
+            "start_round succeeded: room_id=%s round_id=%s active_members=%s",
+            room_id,
+            round_.id,
+            len(active_members),
+        )
         return round_
 
     @staticmethod
