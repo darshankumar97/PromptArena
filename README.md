@@ -10,8 +10,8 @@ A minimal realtime multiplayer battle room: one host runs the challenge, partici
 
 | Step | Action |
 |------|--------|
-| 1 | Start API: `cd backend && python run.py` |
-| 2 | Start UI: `cd frontend && npm run dev` |
+| 1 | Start API: `cd backend && python run.py` (or `.\start.ps1`) |
+| 2 | Start UI: `cd frontend && npm run dev` (or `.\start.ps1`) |
 | 3 | Open http://localhost:3000 in **two** browser windows |
 | 4 | Window A: name **Host** → **Create room** → copy 6-letter code |
 | 5 | Window B: name **Guest** → **Join room** with code |
@@ -30,7 +30,7 @@ A minimal realtime multiplayer battle room: one host runs the challenge, partici
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.11+ (3.12 recommended for production parity)
 - Node.js 20+
 - npm
 
@@ -39,23 +39,27 @@ A minimal realtime multiplayer battle room: one host runs the challenge, partici
 ```bash
 cd backend
 python -m venv .venv
-.venv\Scripts\activate          
+.venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
 
 pip install -r requirements.txt
-copy .env.example .env           
+copy .env.example .env          # macOS/Linux: cp .env.example .env
 
-flask --app app:create_app init-db
 python run.py
 ```
 
 API: http://localhost:5000  
 Health: http://localhost:5000/api/health
 
+Tables are created automatically on startup (`create_app()` → `db.create_all()`). `flask --app app:create_app init-db` is optional for manual setup.
+
 ### 2. Frontend
 
 ```bash
+cd frontend
+npm install
+copy .env.local.example .env.local   # macOS/Linux: cp .env.local.example .env.local
 
-
+npm run dev
 ```
 
 UI: http://localhost:3000
@@ -64,45 +68,243 @@ UI: http://localhost:3000
 
 | File | Purpose |
 |------|---------|
-| `backend/.env.example` | Flask, SQLite, JWT, CORS, mock AI tuning |
+| `backend/.env.example` | Flask, SQLite, JWT, CORS, Socket.IO, mock AI tuning |
 | `frontend/.env.local.example` | `NEXT_PUBLIC_API_URL` (default `http://localhost:5000`) |
 
-**Required:** `CORS_ORIGINS` on the backend must include `http://localhost:3000`.
+**Required locally:** `CORS_ORIGINS` on the backend must include `http://localhost:3000`.
 
 ---
 
-## Architecture overview
+## Production deployment
+
+### Backend — Render
+
+| Setting | Value |
+|---------|--------|
+| **Root directory** | `backend` |
+| **Build command** | `pip install -r requirements.txt` |
+| **Start command** | `gunicorn -c gunicorn.conf.py wsgi:app` |
+
+**Environment variables:**
+
+| Variable | Example / notes |
+|----------|-----------------|
+| `FLASK_ENV` | `production` |
+| `SOCKETIO_ASYNC_MODE` | `eventlet` |
+| `PYTHON_VERSION` | `3.12.7` |
+| `SECRET_KEY` | Strong random string |
+| `JWT_SECRET_KEY` | Strong random string |
+| `DATABASE_URL` | `sqlite:///instance/promptarena.db` |
+| `CORS_ORIGINS` | `https://your-app.vercel.app` |
+
+**Socket.IO on Gunicorn:** WebSockets require the **eventlet** worker (`gunicorn.conf.py`). The default **sync** worker only serves HTTP — room join will time out even if the WebSocket handshake returns 101. This repo pins `gunicorn>=25.2,<26` because **Gunicorn 26 removed the eventlet worker**.
+
+After deploy, logs should show:
+
+```text
+Using worker: eventlet
+Flask-SocketIO initialized async_mode=eventlet
+```
+
+A blueprint is in `backend/render.yaml` for reference.
+
+### Frontend — Vercel
+
+| Setting | Value |
+|---------|--------|
+| **Root directory** | `frontend` |
+| **Build command** | `npm run build` |
+| **Environment variable** | `NEXT_PUBLIC_API_URL=https://your-render-service.onrender.com` (no trailing slash) |
+
+Redeploy after changing env vars.
+
+### Production caveats
+
+- Render free-tier SQLite is **ephemeral** — data is lost on redeploy unless you attach persistent disk or switch to Postgres.
+- Run **one Gunicorn worker** (`-w 1`) unless you add `SOCKETIO_MESSAGE_QUEUE` (Redis) for multi-process Socket.IO.
+
+---
+
+## System architecture
 
 ```
-┌─────────────────┐     REST (JWT)      ┌──────────────────────────────┐
-│  Next.js UI     │◄──────────────────►│  Flask app factory           │
-│  Zustand stores │     Socket.IO       │  Blueprints + Socket handlers │
-└────────┬────────┘◄──────────────────►│  Services (domain logic)      │
-         │                              │  SQLAlchemy → SQLite          │
-         │                              │  ThreadPoolExecutor → AI jobs │
-         └──────────────────────────────┴──────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Vercel (Next.js 16)                              │
+│  LandingPage ──► /room/[code] ──► Zustand (auth, socket, room)          │
+│       │                    │                                             │
+│       │ REST (JWT Bearer)  │ Socket.IO (WebSocket)                       │
+└───────┼────────────────────┼─────────────────────────────────────────────┘
+        │                    │
+        ▼                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Render (Gunicorn + eventlet worker)                   │
+│  wsgi.py ──► create_app() ──► Blueprints (REST) + Socket handlers        │
+│                    │                                                     │
+│         ┌──────────┼──────────┐                                         │
+│         ▼          ▼          ▼                                         │
+│    Services   SnapshotService  ThreadPoolExecutor (mock AI jobs)         │
+│         │          │                                                     │
+│         └──────────┼──────────► SQLAlchemy ──► SQLite                    │
+└────────────────────┴────────────────────────────────────────────────────┘
 ```
 
-- **Frontend:** App Router, TypeScript, Tailwind, Zustand (`auth`, `socket`, `room` snapshot only).
-- **Backend:** Flask (not FastAPI — same layering: blueprints, services, typed models).
-- **Realtime:** Flask-SocketIO; room channel `room:{id}`.
-- **Async jobs:** In-process `ThreadPoolExecutor` (no Redis/Celery — appropriate for MVP).
-- **AI:** `BaseAIProvider` + `MockAIProvider` (2–6s latency, ~12% random failure, cinematic JSON campaigns). Swap provider in `app/ai/__init__.py` for a real LLM later.
+| Layer | Technology | Role |
+|-------|------------|------|
+| **Frontend** | Next.js App Router, TypeScript, Tailwind, Zustand | UI, client state, REST + Socket.IO client |
+| **API** | Flask blueprints (`/api/auth`, `/api/rooms`, `/api/health`) | JWT auth, room CRUD, round actions |
+| **Realtime** | Flask-SocketIO (`async_mode=eventlet`) | Live snapshots, activity, job status |
+| **Domain** | Service layer (`RoomService`, `RoundService`, …) | Business rules, permissions |
+| **Persistence** | SQLAlchemy + SQLite | Users, rooms, rounds, submissions, jobs |
+| **AI** | `MockAIProvider` + `ThreadPoolExecutor` | Async campaign generation (swappable) |
 
 Deeper design notes: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ---
 
+## Technical flows & workflows
+
+### 1. Authentication (guest JWT)
+
+```mermaid
+sequenceDiagram
+    participant UI as Next.js UI
+    participant API as Flask /api/auth
+    participant DB as SQLite
+
+    UI->>API: POST /register { display_name }
+    API->>DB: INSERT user
+    API-->>UI: 201 { access_token, refresh_token, user }
+    UI->>UI: saveAuth(localStorage + Zustand)
+    Note over UI: JWT default TTL 24h (JWT_ACCESS_TOKEN_EXPIRES)
+```
+
+On page load, `authStore.hydrate()` calls `GET /api/auth/me` with the stored token. Expired tokens redirect to landing with a session-expired message.
+
+### 2. Room creation & join (host path)
+
+```mermaid
+sequenceDiagram
+    participant UI as LandingPage / RoomView
+    participant REST as Flask REST
+    participant SIO as Flask-SocketIO
+    participant DB as SQLite
+
+    UI->>REST: POST /api/rooms (Bearer JWT)
+    REST->>DB: create room + host participant
+    REST-->>UI: 201 { room.code }
+    UI->>UI: router.push(/room/CODE)
+
+    Note over UI: useRoomSession(roomCode)
+    UI->>SIO: connect WebSocket
+    UI->>SIO: emit authenticate { access_token }
+    SIO-->>UI: authenticated { user }
+    par Socket join
+        UI->>SIO: emit join_room { room_code }
+        SIO->>DB: enter_room (host already member)
+        SIO-->>UI: room_snapshot
+    and REST fallback
+        UI->>REST: POST /api/rooms/CODE/join
+        REST-->>UI: 200 { snapshot }
+    end
+    UI->>UI: applySnapshot → battle dashboard
+```
+
+**Authoritative state:** `room_snapshot` (Socket.IO) and REST snapshot responses share the same `SnapshotService.build()` output. The frontend polls the Zustand store for up to 6s; REST join-by-code runs in parallel so the room loads even if socket events are delayed.
+
+### 3. Battle round lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> lobby: room created
+    lobby --> prompting: host start_round
+    prompting --> resolving: host lock_submissions
+    resolving --> results: host select_winner
+    results --> finished: optional
+    finished --> [*]
+```
+
+```mermaid
+sequenceDiagram
+    participant Host as Host UI
+    participant Guest as Guest UI
+    participant API as Flask
+    participant Jobs as ThreadPoolExecutor
+    participant Room as Socket room channel
+
+    Host->>API: POST .../round/start
+    API->>Room: room_snapshot + round_started
+
+    Guest->>API: POST .../round/{id}/submit
+    API->>Jobs: schedule_generation_for_submission
+    API->>Room: submission_received + room_snapshot
+    Jobs-->>Room: job_running / job_completed (via notify_room_sync)
+
+    Host->>API: POST .../round/{id}/lock
+    API->>Room: round_locked + room_snapshot
+
+    Host->>API: POST .../submissions/{id}/score
+    Host->>API: POST .../round/{id}/winner
+    API->>Room: winner_selected + room_snapshot
+```
+
+Submissions close only when the host **locks** — there is no server-side prompt deadline timer.
+
+### 4. Socket.IO connection model
+
+```mermaid
+flowchart LR
+    subgraph client [Browser]
+        A[connectSocket]
+        B[authenticateSocket]
+        C[joinRoomSocket]
+        D[listen room_snapshot]
+    end
+    subgraph server [Gunicorn eventlet worker]
+        E[on_connect]
+        F[on_authenticate]
+        G[on_join_room]
+        H[emit room_snapshot]
+    end
+    A --> E
+    B --> F
+    C --> G
+    G --> H
+    H --> D
+```
+
+| Step | Client | Server handler | Event |
+|------|--------|----------------|-------|
+| 1 | `io(API_BASE)` | `on_connect` | `connected` |
+| 2 | `emit authenticate` | `on_authenticate` | `authenticated` |
+| 3 | `emit join_room` | `on_join_room` | `room_snapshot` (+ `room_reconnected` if returning member) |
+| 4 | `on('room_snapshot')` | `notify_room_sync` on state changes | broadcast to `room:{id}` |
+
+In-memory map `_connected_users[sid] → user_id` is **ephemeral** (lost on restart). DB holds room membership; reconnect re-authenticates and re-joins.
+
+### 5. Backend startup (production)
+
+```mermaid
+flowchart TD
+    A[gunicorn -c gunicorn.conf.py wsgi:app] --> B[eventlet.monkey_patch in wsgi.py]
+    B --> C[create_app]
+    C --> D[db.init_app + socketio.init_app async_mode=eventlet]
+    C --> E[db.create_all on fresh deploy]
+    C --> F[register blueprints + socket handlers]
+    C --> G[serve HTTP + WebSocket on $PORT]
+```
+
+---
+
 ## Database schema (entity model)
 
-SQLite via SQLAlchemy. Integer PKs, UTC timestamps.
+SQLite via SQLAlchemy. Integer PKs, UTC timestamps. Tables are auto-created on app startup.
 
 | Entity | Purpose |
 |--------|---------|
 | **User** | Guest identity (`display_name`); JWT identifies user across refreshes |
 | **Room** | `code`, `host_user_id`, `status`, `current_round_id`, `max_players` |
 | **Participant** | `room_id`, `user_id`, `role` (host/player), `connection_status`, soft `left_at` |
-| **Round** | `room_id`, `round_number`, `status`, `battle_theme`, `prompt_deadline`, `winner_user_id` |
+| **Round** | `room_id`, `round_number`, `status`, `battle_theme`, `winner_user_id` |
 | **Submission** | One per user per round; `prompt_text`, `status`, `ai_output` (JSON campaign), `score` |
 | **GenerationJob** | One per submission; `status`, `retry_count`, timestamps, `error_message` |
 | **ActivityEvent** | Append-only feed (`event_type`, JSON `payload`) |
@@ -118,7 +320,7 @@ SQLite via SQLAlchemy. Integer PKs, UTC timestamps.
 | Phase | Meaning |
 |-------|---------|
 | `lobby` | Waiting; host can start round (≥2 members) |
-| `prompting` | Participants submit one prompt each |
+| `prompting` | Participants submit one prompt each; host locks when ready |
 | `resolving` | Submissions locked; generations finish; host judges |
 | `results` | Winner selected; campaigns visible |
 | `finished` | Optional end state (not required for happy path) |
@@ -164,6 +366,8 @@ Mirrors room phase while the round is active.
 
 REST mirrors host/player actions for clients that prefer HTTP; both paths emit the same socket events.
 
+**REST join endpoints:** `POST /api/rooms/id/{room_id}/join` and `POST /api/rooms/{code}/join` (used as socket fallback on room page load).
+
 ---
 
 ## Chosen judging / scoring mechanism
@@ -196,7 +400,7 @@ REST mirrors host/player actions for clients that prefer HTTP; both paths emit t
 | JWT in browser `localStorage` | Thread pool task handles |
 | Last room code in `localStorage` for rejoin UX | |
 
-Refreshing the page: JWT + DB restore room snapshot via REST/Socket; battle state survives.
+Refreshing the page: JWT + DB restore room snapshot via REST/Socket; battle state survives (on persistent storage).
 
 ---
 
@@ -213,6 +417,7 @@ Refreshing the page: JWT + DB restore room snapshot via REST/Socket; battle stat
 | Job timeout | `timed_out` on job; submission `failed`; retry if allowed |
 | Socket disconnect | Auto-reconnect; re-`authenticate` + re-`join_room`; personal snapshot refresh |
 | Token expired | Landing hydrate clears bad token; user re-enters name |
+| Socket events delayed | REST `POST /api/rooms/{code}/join` fallback on room page |
 
 ---
 
@@ -240,22 +445,22 @@ Enforced in `RoundService`, `JudgingService`, and socket handlers — not only h
 
 - **One round per room session** — no tournament bracket.
 - **Guest auth** — each “login” registers a new user unless reusing stored JWT; no email/password.
-- **Single server process** — in-memory socket map and thread pool; no horizontal scale without Redis adapter + queue.
-- **Polling not used** for battle state — Socket.IO required.
+- **Single Gunicorn worker** — in-memory socket map and thread pool; horizontal scale needs Redis (`SOCKETIO_MESSAGE_QUEUE`) + job queue.
+- **SQLite on Render free tier** — ephemeral disk; use Postgres or persistent volume for durable production data.
+- **Gunicorn 26+** — eventlet worker removed upstream; pin `gunicorn<26` or migrate to `gevent` worker.
 - **No spectator mode, media generation, payments, moderation.**
 - **Mobile layout** — desktop-first battle dashboard.
-- **No hosted deployment** in repo (local demo only).
 
 ---
 
 ## What I would improve with more time
 
 1. Real OpenAI/Anthropic provider behind `BaseAIProvider` with structured output schema.
-2. Playwright e2e test for two-tab battle flow.
-3. Redis + Celery for generation at scale; Socket.IO message queue for multi-worker.
-4. Refresh token rotation and “same display name” session resume policy.
-5. Host deadline auto-lock scheduler when all jobs complete.
-6. Short demo video/GIF in repo for reviewers.
+2. Migrate Gunicorn stack from eventlet to **gevent** (Gunicorn 26 compatible).
+3. Playwright e2e test for two-tab battle flow.
+4. Redis + Celery for generation at scale; Socket.IO message queue for multi-worker.
+5. Refresh token rotation and “same display name” session resume policy.
+6. Postgres on Render with Alembic migrations.
 
 ---
 
@@ -263,19 +468,24 @@ Enforced in `RoundService`, `JudgingService`, and socket handlers — not only h
 
 ```
 PromptArena/
-├── README.md                 ← this file (submission README)
+├── README.md
+├── docs/ARCHITECTURE.md
 ├── backend/
 │   ├── app/                  # Flask factory, models, services, sockets
-│   ├── tests/                # pytest assignment flow
-│   ├── requirements.txt
+│   ├── tests/                # pytest (assignment flow, reconnect, socket join)
+│   ├── requirements.txt      # gunicorn>=25.2,<26; eventlet>=0.41
 │   ├── .env.example
-│   └── run.py
+│   ├── run.py                # Dev: eventlet + socketio.run()
+│   ├── wsgi.py               # Prod: monkey_patch + create_app (Render entry)
+│   ├── gunicorn.conf.py      # eventlet worker, 1 process
+│   └── render.yaml           # Render blueprint reference
 ├── frontend/
 │   ├── src/app/              # Landing + /room/[code]
 │   ├── src/components/       # Room UI
-│   ├── src/stores/           # Zustand
+│   ├── src/hooks/            # useRoomSession (REST + socket join)
+│   ├── src/stores/           # Zustand (auth, socket, room)
+│   ├── src/config/api.ts     # NEXT_PUBLIC_API_URL
 │   └── .env.local.example
-└── docs/ARCHITECTURE.md      # Extended architecture (phase 1)
 ```
 
 ---
