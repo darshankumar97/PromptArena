@@ -6,6 +6,7 @@ from sqlalchemy.orm import joinedload
 from app.enums import RoomStatus, RoundStatus, SubmissionStatus
 from app.errors import NotFoundError
 from app.models import ActivityEvent, Round, Room, Submission
+from app.models.base import utc_isoformat
 from app.services.room_service import RoomService
 from extensions import db
 
@@ -23,13 +24,24 @@ class SnapshotService:
         )
 
     @staticmethod
-    def build(room_id: int, viewer_user_id: int | None) -> dict:
+    def build(
+        room_id: int,
+        viewer_user_id: int | None,
+        *,
+        is_participant: bool | None = None,
+    ) -> dict:
         """viewer_user_id None => broadcast-safe snapshot (no other players' prompts until public)."""
         room = db.session.scalar(select(Room).where(Room.id == room_id))
         if room is None:
             raise NotFoundError("Room not found", code="ROOM_NOT_FOUND")
 
         participants = RoomService.list_active_participants(room_id)
+        if is_participant is None and viewer_user_id is not None:
+            is_participant = (
+                RoomService.get_active_participant(room_id, viewer_user_id) is not None
+            )
+        elif is_participant is None:
+            is_participant = False
 
         current: Round | None = None
         if room.current_round_id:
@@ -75,7 +87,7 @@ class SnapshotService:
                     )
                     submissions_out.append(entry)
                 else:
-                    if sub.user_id == viewer_user_id:
+                    if is_participant and sub.user_id == viewer_user_id:
                         submissions_out.append(
                             SnapshotService._submission_payload(
                                 sub,
@@ -101,9 +113,7 @@ class SnapshotService:
                 "round_number": current.round_number,
                 "status": current.status.value,
                 "battle_theme": current.battle_theme,
-                "prompt_deadline": current.prompt_deadline.isoformat()
-                if current.prompt_deadline
-                else None,
+                "prompt_deadline": utc_isoformat(current.prompt_deadline),
                 "winner_user_id": current.winner_user_id,
                 "resolved_at": current.resolved_at.isoformat()
                 if current.resolved_at
@@ -140,6 +150,8 @@ class SnapshotService:
             entry["is_winner"] = True
         if sub.generation_job is not None:
             entry["generation_job"] = sub.generation_job.to_dict()
+        if sub.status == SubmissionStatus.COMPLETED:
+            entry.update(SnapshotService._campaign_fields(sub))
         return entry
 
     @staticmethod

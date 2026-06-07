@@ -4,10 +4,12 @@ export function Card({
   children,
   className,
   padding = "md",
+  interactive,
 }: {
   children: React.ReactNode;
   className?: string;
   padding?: "none" | "sm" | "md" | "lg";
+  interactive?: boolean;
 }) {
   const paddingClass = {
     none: "",
@@ -19,7 +21,8 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-lg border border-[var(--border)] bg-[var(--card)]",
+        "rounded-md border border-arena-border bg-arena-surface",
+        interactive && "hover:border-arena-border-strong",
         paddingClass,
         className,
       )}
@@ -38,9 +41,13 @@ export function CardHeader({
 }) {
   return (
     <div className="mb-4">
-      <h3 className="text-sm font-medium text-[var(--foreground)]">{title}</h3>
+      <h3 className="text-[17px] font-medium leading-[1.2] text-arena-text-primary">
+        {title}
+      </h3>
       {description && (
-        <p className="mt-1 text-xs text-[var(--muted-foreground)]">{description}</p>
+        <p className="mt-2 text-[13px] leading-[1.6] text-arena-text-secondary">
+          {description}
+        </p>
       )}
     </div>
   );

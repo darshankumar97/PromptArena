@@ -141,6 +141,33 @@ class RoomService:
         return participant, True
 
     @staticmethod
+    def end_room(*, room_id: int, host_user_id: int) -> Room:
+        from app.services.round_service import RoundService
+
+        RoundService._require_host(room_id, host_user_id)
+        room = RoomService.get_by_id(room_id)
+
+        if room.status == RoomStatus.FINISHED:
+            raise ConflictError("Room has already ended", code="ROOM_FINISHED")
+
+        if room.status != RoomStatus.RESULTS:
+            raise ConflictError(
+                "Room can only be ended from the results phase",
+                code="INVALID_ROOM_STATE",
+            )
+
+        room.status = RoomStatus.FINISHED
+        ActivityService.log(
+            room_id=room.id,
+            event_type=ActivityEventType.ROOM_ENDED,
+            payload={"room_id": room.id, "code": room.code},
+            actor_user_id=host_user_id,
+        )
+        db.session.commit()
+        db.session.refresh(room)
+        return room
+
+    @staticmethod
     def join_room(*, room: Room, user: User) -> Participant:
         participant, _ = RoomService.enter_room(room=room, user=user)
         return participant

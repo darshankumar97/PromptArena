@@ -130,3 +130,45 @@ export interface ActivityEvent {
 export interface ApiError {
   error: { code: string; message: string };
 }
+
+export interface BattleHistoryItem {
+  room_id: number;
+  room_code: string;
+  battle_theme: string;
+  played_at: string;
+  my_score: number | null;
+  my_rank: number | null;
+  total_players: number;
+  winner_display_name: string;
+  i_won: boolean;
+  round_status: string;
+}
+
+export interface AdminSubmission {
+  display_name: string;
+  prompt_text: string;
+  ai_output: string;
+  score: number;
+  judge_reason: string;
+  rank: number;
+}
+
+export interface AdminBattle {
+  room_id: number;
+  room_code: string;
+  battle_theme: string;
+  played_at: string;
+  total_players: number;
+  winner_display_name: string;
+  winner_score: number;
+  submissions: AdminSubmission[];
+}
+
+export interface AdminUser {
+  id: number;
+  display_name: string;
+  is_admin: boolean;
+  created_at: string;
+  battle_count: number;
+  wins: number;
+}

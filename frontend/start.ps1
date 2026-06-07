@@ -7,9 +7,13 @@ if (-not (Test-Path ".env.local")) {
     Write-Host "Created .env.local from .env.local.example"
 }
 
-if (-not (Test-Path "node_modules")) {
-    Write-Host "Installing npm dependencies..."
-    npm install
+$needsInstall = (-not (Test-Path "node_modules\next\package.json")) `
+  -or (-not (Test-Path "node_modules\enhanced-resolve\package.json")) `
+  -or (-not (Test-Path "node_modules\@tailwindcss\postcss\package.json"))
+
+if ($needsInstall) {
+    Write-Host "Installing npm dependencies (including dev)..."
+    npm install --include=dev
 }
 
 $env:NODE_ENV = "development"

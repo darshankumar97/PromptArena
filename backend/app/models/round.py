@@ -7,7 +7,7 @@ from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.enums import RoundStatus
-from app.models.base import BaseModel, TimestampMixin
+from app.models.base import BaseModel, TimestampMixin, utc_isoformat
 
 if TYPE_CHECKING:
     from app.models.room import Room
@@ -51,9 +51,9 @@ class Round(TimestampMixin, BaseModel):
             "round_number": self.round_number,
             "status": self.status.value,
             "battle_theme": self.battle_theme,
-            "prompt_deadline": self.prompt_deadline.isoformat() if self.prompt_deadline else None,
+            "prompt_deadline": utc_isoformat(self.prompt_deadline),
             "winner_user_id": self.winner_user_id,
-            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+            "resolved_at": utc_isoformat(self.resolved_at),
             "created_at": self.created_at.isoformat(),
         }
         if include_submissions:

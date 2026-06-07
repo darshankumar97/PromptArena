@@ -1,7 +1,6 @@
 "use client";
 
-import { CampaignCard } from "@/components/room/CampaignCard";
-import { Card } from "@/components/ui/Card";
+import { CampaignCard, ResolvingSkeleton } from "@/components/room/CampaignCard";
 import {
   campaignsEmptyCopy,
   hasJudgeableSubmissions,
@@ -34,17 +33,25 @@ export function CampaignsSection({
     snapshot.room.status === "resolving" &&
     hasJudgeableSubmissions(snapshot);
 
+  if (
+    snapshot.room.status === "resolving" &&
+    round.submissions.length > 0 &&
+    !hasJudgeableSubmissions(snapshot)
+  ) {
+    return <ResolvingSkeleton />;
+  }
+
   if (round.submissions.length === 0) {
     const copy = campaignsEmptyCopy(snapshot.room.status, submittedCount);
     return (
-      <Card padding="lg" className="text-center">
-        <p className="text-sm font-medium text-[var(--muted-foreground)]">
+      <div className="rounded-md border border-arena-border bg-arena-surface p-6 text-center">
+        <p className="text-[15px] font-medium text-arena-text-secondary">
           {copy.title}
         </p>
-        <p className="mx-auto mt-2 max-w-md text-sm text-[var(--muted)]">
+        <p className="mx-auto mt-2 max-w-md text-[13px] text-arena-text-muted">
           {copy.description}
         </p>
-      </Card>
+      </div>
     );
   }
 

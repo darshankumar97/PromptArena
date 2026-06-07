@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 import { api } from "@/lib/api";
+import { consumeJoinIntent } from "@/lib/auth-storage";
 import {
   handleSessionExpired,
   isUnauthorizedResponse,
@@ -12,6 +14,7 @@ import {
   connectSocket,
   disconnectSocket,
   getSocket,
+  bindSpectatorListener,
   joinRoomSocket,
 } from "@/lib/socket";
 import { useAuthStore } from "@/stores/authStore";
@@ -28,6 +31,7 @@ const log = (message: string, detail?: unknown) => {
 };
 
 export function useRoomSession(roomCode: string) {
+  const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
   const applySnapshot = useRoomStore((s) => s.applySnapshot);
   const appendActivity = useRoomStore((s) => s.appendActivity);
@@ -66,7 +70,9 @@ export function useRoomSession(roomCode: string) {
       log("setup started", { roomCode });
 
       try {
-        const loadSnapshotViaRest = async () => {
+        consumeJoinIntent(roomCode);
+
+        const ensureParticipantViaRest = async () => {
           log("rest join requested", { roomCode });
           const { snapshot } = await api.joinRoomByCode(accessToken, roomCode);
           if (cancelled) return;
@@ -84,11 +90,20 @@ export function useRoomSession(roomCode: string) {
 
         setSocketStatus("authenticated");
 
-        const restJoinPromise = loadSnapshotViaRest().catch((e) => {
+        try {
+          await ensureParticipantViaRest();
+        } catch (e) {
           log("rest join failed", e instanceof Error ? e.message : e);
-        });
+          if (!cancelled) {
+            const message =
+              e instanceof Error ? e.message : "Could not join room via API";
+            setRoomError(message);
+          }
+        }
+        if (cancelled) return;
 
         const socket = getSocket();
+        bindSpectatorListener(socket);
 
         socket.on("room_snapshot", (payload: RoomSnapshot) => {
           log("room_snapshot received", { roomId: payload.room.id });
@@ -134,6 +149,11 @@ export function useRoomSession(roomCode: string) {
           if (rid) void refreshPersonalSnapshot(rid);
         });
 
+        socket.on("room_ended", () => {
+          log("room_ended received");
+          router.replace("/");
+        });
+
         joinRoomSocket(roomCode);
 
         const waitForRoom = async () => {
@@ -153,7 +173,11 @@ export function useRoomSession(roomCode: string) {
             }
             await new Promise((r) => setTimeout(r, 200));
           }
-          await restJoinPromise;
+          try {
+            await ensureParticipantViaRest();
+          } catch {
+            // error already surfaced above
+          }
           const snap = useRoomStore.getState().snapshot;
           if (snap?.room.id) {
             roomIdRef.current = snap.room.id;
@@ -188,6 +212,7 @@ export function useRoomSession(roomCode: string) {
       socket.off("connect");
       socket.off("disconnect");
       socket.off("submission_saved");
+      socket.off("room_ended");
       disconnectSocket();
       resetRoom();
       resetSocket();
@@ -205,6 +230,7 @@ export function useRoomSession(roomCode: string) {
     setSocketError,
     resetSocket,
     refreshPersonalSnapshot,
+    router,
   ]);
 
   return { refreshPersonalSnapshot, roomId: roomIdRef.current };

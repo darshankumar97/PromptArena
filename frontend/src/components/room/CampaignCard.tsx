@@ -2,7 +2,6 @@
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/cn";
 import { participantName, submissionId } from "@/lib/room-helpers";
@@ -50,30 +49,27 @@ export function CampaignCard({
     roomStatus === "resolving" &&
     submission.status === "completed" &&
     !!campaign;
-  const canRetry =
-    !!onRetry &&
-    (submission.status === "failed" ||
-      job?.status === "failed" ||
-      job?.status === "timed_out");
-
   return (
-    <Card
+    <div
       className={cn(
-        submission.is_winner && "border-[var(--foreground)]/20 bg-[var(--card-elevated)]",
+        "rounded-md border border-arena-border bg-arena-surface p-5",
+        submission.is_winner && "border-arena-border-strong",
       )}
     >
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="text-sm font-medium text-[var(--foreground)]">{name}</h3>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <h3 className="text-[15px] font-medium text-arena-text-primary">
+            {name}
+          </h3>
+          <div className="mt-2 flex flex-wrap gap-2">
             <Badge variant="default">{submission.status}</Badge>
             {job && (
               <Badge
                 variant={
                   job.status === "completed"
-                    ? "results"
+                    ? "success"
                     : job.status === "failed"
-                      ? "finished"
+                      ? "failed"
                       : "prompting"
                 }
               >
@@ -89,17 +85,17 @@ export function CampaignCard({
       </div>
 
       {submission.status === "processing" && !campaign && (
-        <div className="flex items-center gap-3 rounded-md border border-[var(--border-subtle)] bg-[var(--background)] px-4 py-5">
+        <div className="flex items-center gap-3 rounded border border-arena-border bg-arena-bg px-4 py-5">
           <Spinner size="sm" />
-          <p className="text-sm text-[var(--muted-foreground)]">
+          <p className="text-[15px] text-arena-text-secondary">
             Generating campaign…
           </p>
         </div>
       )}
 
       {job?.status === "failed" && (
-        <div className="mb-4 rounded-md border border-red-900/50 bg-red-950/20 px-4 py-3">
-          <p className="text-sm text-red-300">
+        <div className="mb-4 rounded border border-arena-danger/30 bg-arena-danger-subtle px-4 py-3">
+          <p className="text-[15px] text-arena-danger">
             {job.error_message || "Generation failed"}
           </p>
           {onRetry && sid && (
@@ -116,38 +112,40 @@ export function CampaignCard({
 
       {campaign ? (
         <div className="space-y-2">
-          <h4 className="text-lg font-semibold text-[var(--foreground)]">
+          <h4 className="text-[17px] font-medium leading-[1.2] text-arena-text-primary">
             {campaign.title}
           </h4>
-          <p className="text-sm font-medium text-[var(--muted-foreground)]">
+          <p className="text-[13px] text-arena-text-secondary">
             {campaign.tagline}
           </p>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--muted-foreground)]">
+          <p className="whitespace-pre-wrap text-[15px] leading-[1.6] text-arena-text-primary">
             {campaign.campaign_text}
           </p>
         </div>
       ) : (
         !job?.status?.includes("running") &&
         submission.status !== "processing" && (
-          <p className="text-sm text-[var(--muted)]">Waiting for output…</p>
+          <p className="text-[13px] text-arena-text-muted">Waiting for output…</p>
         )
       )}
 
       {submission.prompt_text && (
-        <details className="mt-4 border-t border-[var(--border-subtle)] pt-3">
-          <summary className="cursor-pointer text-xs text-[var(--muted)] hover:text-[var(--muted-foreground)]">
+        <details className="mt-4 border-t border-arena-border pt-3">
+          <summary className="cursor-pointer text-[11px] font-medium uppercase tracking-[0.06em] text-arena-text-muted hover:text-arena-text-secondary">
             View prompt
           </summary>
-          <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+          <p className="mt-2 text-[13px] italic text-arena-text-secondary">
             {submission.prompt_text}
           </p>
         </details>
       )}
 
       {canJudge && sid && (
-        <div className="mt-5 border-t border-[var(--border-subtle)] pt-4">
-          <p className="mb-3 text-xs font-medium text-[var(--muted)]">Score</p>
-          <div className="flex flex-wrap items-center gap-1.5">
+        <div className="mt-5 border-t border-arena-border pt-4">
+          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.06em] text-arena-text-muted">
+            Score
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
               <button
                 key={n}
@@ -155,10 +153,10 @@ export function CampaignCard({
                 disabled={scoring}
                 onClick={() => onScore?.(sid, n)}
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-md text-xs font-medium transition-colors",
+                  "flex h-8 w-8 items-center justify-center rounded text-[13px] font-medium",
                   submission.score === n
-                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                    : "border border-[var(--border)] bg-[var(--card)] text-[var(--muted-foreground)] hover:bg-[var(--card-elevated)]",
+                    ? "bg-arena-accent text-white"
+                    : "border border-arena-border bg-arena-surface text-arena-text-secondary hover:border-arena-border-strong hover:bg-arena-elevated",
                 )}
               >
                 {n}
@@ -174,6 +172,24 @@ export function CampaignCard({
           </div>
         </div>
       )}
-    </Card>
+    </div>
+  );
+}
+
+export function ResolvingSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="skeleton-shimmer h-48 rounded-md border border-arena-border"
+          />
+        ))}
+      </div>
+      <p className="text-center text-[13px] text-arena-text-muted">
+        AI is judging submissions…
+      </p>
+    </div>
   );
 }

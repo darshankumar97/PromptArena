@@ -1,30 +1,72 @@
 "use client";
 
+import {
+  CheckCircle,
+  Lock,
+  Swords,
+  Trophy,
+  UserMinus,
+  UserPlus,
+  X,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 import { activityLabel } from "@/lib/room-helpers";
+import { cn } from "@/lib/cn";
 import type { ActivityEvent } from "@/types";
+
+const eventStyles: Record<
+  string,
+  { icon: LucideIcon; className: string }
+> = {
+  player_joined: { icon: UserPlus, className: "text-arena-success" },
+  player_left: { icon: UserMinus, className: "text-arena-text-muted" },
+  round_started: { icon: Swords, className: "text-arena-accent" },
+  prompt_submitted: {
+    icon: CheckCircle,
+    className: "text-arena-text-secondary",
+  },
+  round_locked: { icon: Lock, className: "text-arena-warning" },
+  winner_announced: { icon: Trophy, className: "text-arena-accent" },
+  room_ended: { icon: X, className: "text-arena-danger" },
+};
+
+function EventIcon({ eventType }: { eventType: string }) {
+  const style = eventStyles[eventType] ?? {
+    icon: CheckCircle,
+    className: "text-arena-text-muted",
+  };
+  const Icon = style.icon;
+  return <Icon className={cn("h-3 w-3 shrink-0", style.className)} />;
+}
 
 export function ActivityFeed({ events }: { events: ActivityEvent[] }) {
   if (events.length === 0) {
     return (
-      <p className="text-xs leading-relaxed text-[var(--muted)]">
+      <p className="px-4 py-8 text-[13px] leading-[1.6] text-arena-text-muted">
         Events from the room will show up here.
       </p>
     );
   }
 
   return (
-    <ul className="flex max-h-56 flex-col gap-1.5 overflow-y-auto lg:max-h-72">
+    <ul className="flex flex-col overflow-y-auto">
       {[...events].reverse().map((event) => (
         <li
           key={event.id}
-          className="rounded-md border border-[var(--border-subtle)] bg-[var(--card)] px-2.5 py-2"
+          className="animate-feed-in min-h-11 border-b border-arena-border/40 px-4 py-3"
         >
-          <p className="text-xs text-[var(--muted-foreground)]">
-            {activityLabel(event.event_type, event.payload)}
-          </p>
-          <p className="mt-0.5 text-[10px] text-[var(--muted)]">
-            {new Date(event.created_at).toLocaleTimeString()}
-          </p>
+          <div className="flex items-start gap-3">
+            <EventIcon eventType={event.event_type} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] leading-[1.4] text-arena-text-primary">
+                {activityLabel(event.event_type, event.payload)}
+              </p>
+              <p className="mt-1 text-[11px] text-arena-text-muted">
+                {new Date(event.created_at).toLocaleTimeString()}
+              </p>
+            </div>
+          </div>
         </li>
       ))}
     </ul>

@@ -9,3 +9,7 @@ pytest>=8.0.0
 # Gunicorn 26 removed the eventlet worker; pin <26 until migrating to gevent.
 gunicorn>=25.2,<26
 eventlet>=0.41.0
+redis>=5.0.0
+rq>=2.0.0
+google-generativeai>=0.8.0
+groq>=0.13.0

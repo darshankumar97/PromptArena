@@ -5,8 +5,11 @@ import {
 } from "@/lib/session-expired";
 import type {
   ActivityEvent,
+  AdminBattle,
+  AdminUser,
   ApiError,
   AuthTokens,
+  BattleHistoryItem,
   Room,
   RoomSnapshot,
   SubmissionSummary,
@@ -199,6 +202,17 @@ export const api = {
     return parseJson<RoundMutationResponse>(res);
   },
 
+  async endRoom(
+    token: string,
+    roomId: number,
+  ): Promise<{ room: Room; snapshot: RoomSnapshot }> {
+    const res = await fetch(`${API_BASE}/api/rooms/id/${roomId}/end`, {
+      method: "POST",
+      headers: headers(token),
+    });
+    return parseJson(res);
+  },
+
   async scoreSubmission(
     token: string,
     roomId: number,
@@ -231,4 +245,34 @@ export const api = {
 
 export function getApiUrl(): string {
   return API_BASE;
+}
+
+export async function getMyBattles(token: string): Promise<BattleHistoryItem[]> {
+  const res = await fetch(`${API_BASE}/api/battles/my`, {
+    headers: headers(token),
+  });
+  return parseJson<BattleHistoryItem[]>(res);
+}
+
+export async function getAdminBattles(token: string): Promise<AdminBattle[]> {
+  const res = await fetch(`${API_BASE}/api/battles/admin`, {
+    headers: headers(token),
+  });
+  return parseJson<AdminBattle[]>(res);
+}
+
+export async function getAdminUsers(token: string): Promise<AdminUser[]> {
+  const res = await fetch(`${API_BASE}/api/battles/admin/users`, {
+    headers: headers(token),
+  });
+  return parseJson<AdminUser[]>(res);
+}
+
+export async function grantAdmin(token: string, userId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/battles/admin/grant`, {
+    method: "POST",
+    headers: headers(token),
+    body: JSON.stringify({ user_id: userId }),
+  });
+  await parseJson<{ ok: boolean }>(res);
 }

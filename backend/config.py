@@ -58,6 +58,13 @@ class Config:
     SOCKETIO_MESSAGE_QUEUE = os.getenv("SOCKETIO_MESSAGE_QUEUE") or None
     SOCKETIO_ASYNC_MODE = os.getenv("SOCKETIO_ASYNC_MODE", "threading")
 
+    REDIS_URL = os.getenv("REDIS_URL", "")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+    GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    PROMPT_DEADLINE_SECONDS = int(os.getenv("PROMPT_DEADLINE_SECONDS", "300"))
+
     ROOM_CODE_LENGTH = 6
     MAX_PLAYERS_DEFAULT = 8
 
@@ -86,6 +93,8 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     JWT_SECRET_KEY = "test-jwt-secret"
+    GEMINI_API_KEY = ""
+    GROQ_API_KEY = ""
 
 
 config_by_name = {

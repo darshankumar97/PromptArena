@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -99,12 +100,21 @@ class RoundService:
         if not theme:
             raise ValueError("battle_theme cannot be empty")
 
+        deadline_at = None
+        if deadline_seconds is not None:
+            deadline_at = utcnow() + timedelta(seconds=int(deadline_seconds))
+        else:
+            from flask import current_app
+
+            default_secs = int(current_app.config.get("PROMPT_DEADLINE_SECONDS", 300))
+            deadline_at = utcnow() + timedelta(seconds=default_secs)
+
         round_ = Round(
             room_id=room.id,
             round_number=1,
             status=RoundStatus.OPEN,
             battle_theme=theme,
-            prompt_deadline=None,
+            prompt_deadline=deadline_at,
         )
         db.session.add(round_)
         db.session.flush()

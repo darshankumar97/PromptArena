@@ -5,6 +5,7 @@ import {
   handleSessionExpired,
   isUnauthorizedResponse,
 } from "@/lib/session-expired";
+import { useRoomStore } from "@/stores/roomStore";
 
 let socket: Socket | null = null;
 
@@ -103,4 +104,17 @@ export function joinRoomSocket(roomCode: string): void {
   const code = roomCode.toUpperCase();
   log("join_room requested", { room_code: code });
   getSocket().emit("join_room", { room_code: code });
+}
+
+export function bindSpectatorListener(socket = getSocket()): void {
+  socket.off("spectator_updated");
+  socket.on(
+    "spectator_updated",
+    (payload: { spectator_count?: number }) => {
+      if (typeof payload?.spectator_count === "number") {
+        log("spectator_updated", { count: payload.spectator_count });
+        useRoomStore.getState().setSpectatorCount(payload.spectator_count);
+      }
+    },
+  );
 }

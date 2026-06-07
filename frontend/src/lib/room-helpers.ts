@@ -1,3 +1,4 @@
+import { isDeadlineActive } from "@/lib/deadline";
 import type {
   Participant,
   ParticipantRole,
@@ -142,6 +143,7 @@ export function canSubmit(
   if (!me || me.role === "host") return false;
   if (snapshot.room.status !== "prompting") return false;
   if (!snapshot.current_round || snapshot.current_round.status !== "open") return false;
+  if (!isDeadlineActive(snapshot.current_round.prompt_deadline)) return false;
   const already = snapshot.current_round.submissions.some(
     (s) => s.user_id === user.id,
   );

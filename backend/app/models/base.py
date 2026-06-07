@@ -21,6 +21,14 @@ def assume_utc(dt: datetime | None) -> datetime | None:
     return dt
 
 
+def utc_isoformat(dt: datetime | None) -> str | None:
+    """Serialize datetimes for API clients (always explicit UTC)."""
+    if dt is None:
+        return None
+    aware = assume_utc(dt)
+    return aware.isoformat().replace("+00:00", "Z")
+
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

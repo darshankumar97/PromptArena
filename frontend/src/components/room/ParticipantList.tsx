@@ -1,6 +1,7 @@
 "use client";
 
-import { Badge } from "@/components/ui/Badge";
+import { Check, Crown } from "lucide-react";
+
 import { cn } from "@/lib/cn";
 import type { Participant, RoomSnapshot } from "@/types";
 
@@ -11,16 +12,19 @@ export function ParticipantList({
   snapshot: RoomSnapshot;
   currentUserId?: number;
 }) {
-  const winnerId = snapshot.current_round?.winner_user_id;
+  const round = snapshot.current_round;
+  const submittedIds = new Set(
+    round?.submissions.filter((s) => s.submitted).map((s) => s.user_id) ?? [],
+  );
 
   return (
-    <ul className="flex flex-col gap-1.5">
+    <ul className="flex flex-col">
       {snapshot.participants.map((p) => (
         <ParticipantRow
           key={p.id}
           participant={p}
           isYou={p.user_id === currentUserId}
-          isWinner={p.user_id === winnerId}
+          hasSubmitted={submittedIds.has(p.user_id)}
         />
       ))}
     </ul>
@@ -30,38 +34,39 @@ export function ParticipantList({
 function ParticipantRow({
   participant,
   isYou,
-  isWinner,
+  hasSubmitted,
 }: {
   participant: Participant;
   isYou: boolean;
-  isWinner: boolean;
+  hasSubmitted: boolean;
 }) {
   const online = participant.connection_status === "online";
+  const name =
+    participant.display_name ?? `Player ${participant.user_id}`;
 
   return (
-    <li
-      className={cn(
-        "flex items-center justify-between gap-2 rounded-md border px-3 py-2",
-        isYou
-          ? "border-[var(--border)] bg-[var(--card-elevated)]"
-          : "border-[var(--border-subtle)] bg-[var(--card)]",
+    <li className="flex h-8 items-center gap-2">
+      <span
+        className={cn(
+          "h-1.5 w-1.5 shrink-0 rounded-full",
+          online ? "bg-arena-success" : "bg-arena-text-muted",
+        )}
+        aria-hidden
+      />
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate text-[13px]",
+          isYou ? "text-arena-text-primary" : "text-arena-text-secondary",
+        )}
+      >
+        {name}
+      </span>
+      {participant.role === "host" && (
+        <Crown className="h-3 w-3 shrink-0 text-arena-accent" aria-label="Host" />
       )}
-    >
-      <div className="min-w-0">
-        <p className="truncate text-sm text-[var(--foreground)]">
-          {participant.display_name ?? `Player ${participant.user_id}`}
-          {isYou && (
-            <span className="ml-1 text-xs text-[var(--muted)]">(you)</span>
-          )}
-        </p>
-        <div className="mt-1 flex flex-wrap gap-1">
-          {participant.role === "host" && <Badge variant="host">Host</Badge>}
-          {isWinner && <Badge variant="winner">Winner</Badge>}
-        </div>
-      </div>
-      <Badge variant={online ? "online" : "offline"} className="shrink-0">
-        {online ? "Online" : "Away"}
-      </Badge>
+      {hasSubmitted && (
+        <Check className="h-3 w-3 shrink-0 text-arena-accent" aria-label="Submitted" />
+      )}
     </li>
   );
 }

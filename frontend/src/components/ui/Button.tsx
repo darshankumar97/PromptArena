@@ -6,13 +6,13 @@ type Variant = "primary" | "secondary" | "ghost" | "danger";
 
 const styles: Record<Variant, string> = {
   primary:
-    "bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-zinc-200 border border-transparent",
+    "bg-arena-accent text-white hover:bg-arena-accent-dim border border-transparent",
   secondary:
-    "bg-transparent text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--card-elevated)]",
+    "bg-transparent border border-arena-border text-arena-text-primary hover:border-arena-border-strong hover:bg-arena-elevated",
   ghost:
-    "bg-transparent text-[var(--muted-foreground)] border border-transparent hover:text-[var(--foreground)] hover:bg-[var(--card)]",
+    "bg-transparent border-none text-arena-text-secondary hover:bg-arena-elevated hover:text-arena-text-primary",
   danger:
-    "bg-transparent text-red-400 border border-red-900/60 hover:bg-red-950/40",
+    "bg-arena-danger-subtle border border-arena-danger text-arena-danger hover:bg-arena-danger hover:text-white",
 };
 
 export function Button({
@@ -31,15 +31,18 @@ export function Button({
       type="button"
       disabled={disabled || loading}
       className={cn(
-        "inline-flex h-9 items-center justify-center gap-2 rounded-md px-3.5 text-sm font-medium transition-colors",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex h-9 items-center justify-center gap-2 rounded px-4 text-[15px] font-medium leading-none",
+        "disabled:cursor-not-allowed disabled:opacity-40",
         styles[variant],
         className,
       )}
       {...props}
     >
-      {loading && <Spinner size="sm" className="border-zinc-500 border-t-zinc-900" />}
-      {children}
+      {loading ? (
+        <Spinner size="sm" className="border-white/30 border-t-white" />
+      ) : (
+        children
+      )}
     </button>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useEffect } from "react";
 
 import { Button } from "@/components/ui/Button";
@@ -43,7 +44,7 @@ export function ConfirmDialog({
       <button
         type="button"
         aria-label="Close dialog"
-        className="absolute inset-0 bg-black/70"
+        className="absolute inset-0 bg-black/60"
         onClick={loading ? undefined : onCancel}
       />
       <div
@@ -52,24 +53,34 @@ export function ConfirmDialog({
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-desc"
         className={cn(
-          "relative w-full max-w-md rounded-lg border border-[var(--border)]",
-          "bg-[var(--card-elevated)] p-6",
+          "modal-glow relative w-full max-w-md rounded-lg border border-arena-border-strong",
+          "bg-arena-surface p-6",
         )}
       >
-        <h2
-          id="confirm-dialog-title"
-          className="text-base font-semibold text-[var(--foreground)]"
-        >
-          {title}
-        </h2>
+        <div className="flex items-start justify-between gap-4">
+          <h2
+            id="confirm-dialog-title"
+            className="text-[17px] font-medium leading-[1.2] text-arena-text-primary"
+          >
+            {title}
+          </h2>
+          <button
+            type="button"
+            aria-label="Close"
+            className="inline-flex h-9 items-center rounded px-2 text-arena-text-secondary hover:bg-arena-elevated hover:text-arena-text-primary"
+            onClick={loading ? undefined : onCancel}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
         <p
           id="confirm-dialog-desc"
-          className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]"
+          className="mt-3 text-[15px] leading-[1.6] text-arena-text-secondary"
         >
           {message}
         </p>
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="secondary" disabled={loading} onClick={onCancel}>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="ghost" disabled={loading} onClick={onCancel}>
             {cancelLabel}
           </Button>
           <Button loading={loading} onClick={onConfirm}>

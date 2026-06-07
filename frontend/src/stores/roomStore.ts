@@ -9,12 +9,14 @@ interface RoomState {
   activity: ActivityEvent[];
   roomError: string | null;
   actionLoading: string | null;
+  spectatorCount: number;
 
   applySnapshot: (snapshot: RoomSnapshot) => void;
   appendActivity: (event: ActivityEvent) => void;
   setActivity: (events: ActivityEvent[]) => void;
   setRoomError: (error: string | null) => void;
   setActionLoading: (key: string | null) => void;
+  setSpectatorCount: (count: number) => void;
   reset: () => void;
 }
 
@@ -23,6 +25,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   activity: [],
   roomError: null,
   actionLoading: null,
+  spectatorCount: 0,
 
   applySnapshot: (snapshot) => set({ snapshot, roomError: null }),
 
@@ -39,11 +42,14 @@ export const useRoomStore = create<RoomState>((set, get) => ({
 
   setActionLoading: (actionLoading) => set({ actionLoading }),
 
+  setSpectatorCount: (spectatorCount) => set({ spectatorCount }),
+
   reset: () =>
     set({
       snapshot: null,
       activity: [],
       roomError: null,
       actionLoading: null,
+      spectatorCount: 0,
     }),
 }));

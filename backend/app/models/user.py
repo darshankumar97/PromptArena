@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String
+from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel, TimestampMixin
@@ -18,6 +18,7 @@ class User(TimestampMixin, BaseModel):
     __tablename__ = "users"
 
     display_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     hosted_rooms: Mapped[list[Room]] = relationship(
         "Room",

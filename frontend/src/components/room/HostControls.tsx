@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Card, CardHeader } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { api, ApiRequestError } from "@/lib/api";
@@ -14,12 +13,20 @@ import { useAuthStore } from "@/stores/authStore";
 import { useRoomStore } from "@/stores/roomStore";
 import type { RoomSnapshot } from "@/types";
 
+const THEME_SUGGESTIONS = [
+  "Rebrand McDonald's for Gen-Z",
+  "Pitch a startup in a haunted house",
+  "Write a Netflix show about sentient AI",
+] as const;
+
 export function HostControls({
   snapshot,
   onRefresh,
+  variant = "sidebar",
 }: {
   snapshot: RoomSnapshot;
   onRefresh: () => void;
+  variant?: "sidebar" | "center";
 }) {
   const token = useAuthStore((s) => s.accessToken);
   const setRoomError = useRoomStore((s) => s.setRoomError);
@@ -45,6 +52,13 @@ export function HostControls({
       onRefresh();
     } catch (e) {
       if (isSessionExpiredError(e)) return;
+      if (
+        e instanceof ApiRequestError &&
+        e.code === "INVALID_ROOM_STATE" &&
+        e.status === 409
+      ) {
+        await onRefresh();
+      }
       const msg = e instanceof ApiRequestError ? e.message : "Action failed";
       setLocalError(msg);
       setRoomError(msg);
@@ -70,14 +84,11 @@ export function HostControls({
     void lockRound();
   };
 
+  const isCenter = variant === "center";
+
   return (
     <>
-      <Card>
-        <CardHeader
-          title="Host controls"
-          description="Start rounds and lock submissions when ready."
-        />
-
+      <div className={isCenter ? "w-full max-w-md" : ""}>
         {localError && (
           <Alert variant="error" className="mb-4">
             {localError}
@@ -85,16 +96,36 @@ export function HostControls({
         )}
 
         {room.status === "lobby" && (
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {!isCenter && (
+              <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-arena-text-muted">
+                Host controls
+              </p>
+            )}
             <div>
-              <label className="block text-xs font-medium text-[var(--muted-foreground)]">
+              <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.06em] text-arena-text-muted">
                 Battle theme
               </label>
               <Input
-                className="mt-1.5"
                 value={theme}
                 onChange={(e) => setTheme(e.target.value)}
+                placeholder="e.g. Write the most insane luxury perfume campaign..."
               />
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="mr-2 text-[11px] text-arena-text-muted">
+                  Try:
+                </span>
+                {THEME_SUGGESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => setTheme(suggestion)}
+                    className="inline-flex h-7 cursor-pointer items-center rounded-sm border border-arena-border bg-arena-surface px-3 text-[12px] text-arena-text-secondary transition-colors duration-150 hover:border-arena-border-strong hover:text-arena-text-primary"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
             </div>
             {totalPlayers < 2 && (
               <Alert variant="warning">
@@ -102,7 +133,7 @@ export function HostControls({
               </Alert>
             )}
             <Button
-              className="w-full"
+              className={isCenter ? "w-full" : "w-full"}
               loading={actionLoading === "start"}
               disabled={totalPlayers < 2}
               onClick={() =>
@@ -113,16 +144,17 @@ export function HostControls({
                 })
               }
             >
-              Start round
+              Start Round →
             </Button>
           </div>
         )}
 
         {room.status === "prompting" && round && (
-          <div className="space-y-3">
-            <p className="text-xs text-[var(--muted-foreground)]">
+          <div className="space-y-4">
+            <p className="text-[13px] text-arena-text-secondary">
               {submittedCount} submission{submittedCount === 1 ? "" : "s"}
-              {playerCount > 0 && ` · ${playerCount} player${playerCount === 1 ? "" : "s"}`}
+              {playerCount > 0 &&
+                ` · ${playerCount} player${playerCount === 1 ? "" : "s"}`}
             </p>
             <Button
               variant="secondary"
@@ -136,17 +168,17 @@ export function HostControls({
         )}
 
         {room.status === "resolving" && (
-          <p className="text-xs leading-relaxed text-[var(--muted-foreground)]">
+          <p className="text-[13px] leading-[1.6] text-arena-text-secondary">
             {submittedCount === 0 || !judgeable
               ? "No campaigns to judge this round."
-              : "Score campaigns in the feed, then select a winner."}
+              : "Score campaigns below, then select a winner."}
           </p>
         )}
 
         {room.status === "results" && round?.winner_user_id && (
           <Alert variant="success">Round complete — winner selected.</Alert>
         )}
-      </Card>
+      </div>
 
       <ConfirmDialog
         open={confirmZeroLock}

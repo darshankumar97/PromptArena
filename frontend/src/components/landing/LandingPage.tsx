@@ -3,14 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { Navbar } from "@/components/layout/Navbar";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
-import API_BASE from "@/config/api";
 import { api, ApiRequestError } from "@/lib/api";
-import { loadLastRoomCode } from "@/lib/auth-storage";
+import { loadLastRoomCode, markJoinIntent } from "@/lib/auth-storage";
 import { consumeSessionExpiredMessage } from "@/lib/session-expired";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -58,6 +58,7 @@ export function LandingPage() {
       await ensureAuth();
       const token = useAuthStore.getState().accessToken!;
       const { room } = await api.createRoom(token);
+      markJoinIntent(room.code);
       router.push(`/room/${room.code}`);
     } catch (e) {
       if (!(e instanceof Error && e.message === "name required")) {
@@ -80,6 +81,7 @@ export function LandingPage() {
     setBusy("join");
     try {
       await ensureAuth();
+      markJoinIntent(code);
       router.push(`/room/${code}`);
     } catch (e) {
       if (!(e instanceof Error && e.message === "name required")) {
@@ -94,121 +96,111 @@ export function LandingPage() {
 
   if (!hydrated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
+      <div className="flex min-h-screen items-center justify-center bg-arena-bg">
         <Spinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
-      <header className="border-b border-[var(--border-subtle)]">
-        <div className="mx-auto flex h-14 max-w-5xl items-center px-6">
-          <span className="text-sm font-semibold text-[var(--foreground)]">
-            PromptArena
-          </span>
-        </div>
-      </header>
+    <div className="flex min-h-screen flex-col bg-arena-bg">
+      <Navbar showBattlesLink />
 
-      <main className="mx-auto flex max-w-md flex-col px-6 py-16">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-            AI creative battles
+      <main className="flex flex-1 flex-col items-center justify-center px-4 py-12 md:px-6">
+        <div className="mb-12 text-center">
+          <h1 className="text-[22px] font-medium leading-[1.2] text-arena-text-primary">
+            Prompt<span className="text-arena-accent">Arena</span>
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
-            Create or join a room, submit one prompt per round, and compete in
-            realtime. The host locks submissions and picks a winner.
+          <p className="mx-auto mt-3 max-w-xs text-[15px] text-arena-text-secondary">
+            Compete. Prompt. Win.
           </p>
         </div>
 
-        <Card padding="lg">
-          <label className="block text-xs font-medium text-[var(--muted-foreground)]">
+        <div className="mb-8 w-full max-w-2xl">
+          <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.06em] text-arena-text-muted">
             Display name
           </label>
           <Input
-            className="mt-1.5"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="How others see you"
           />
-
           {user && (
-            <p className="mt-3 text-xs text-[var(--muted)]">
+            <p className="mt-3 text-[13px] text-arena-text-muted">
               Signed in as{" "}
-              <span className="text-[var(--foreground)]">{user.display_name}</span>
+              <span className="text-arena-text-primary">{user.display_name}</span>
               <button
                 type="button"
                 onClick={() => logout()}
-                className="ml-2 text-[var(--accent)] hover:underline"
+                className="ml-2 text-arena-accent hover:text-arena-text-primary"
               >
                 Switch user
               </button>
             </p>
           )}
+        </div>
 
-          {sessionNotice && (
-            <Alert variant="warning" className="mt-4">
-              {sessionNotice}
-            </Alert>
-          )}
+        {(sessionNotice || actionError || authError) && (
+          <div className="mb-8 w-full max-w-2xl space-y-3">
+            {sessionNotice && (
+              <Alert variant="warning">{sessionNotice}</Alert>
+            )}
+            {(actionError || authError) && (
+              <Alert variant="error">{actionError || authError}</Alert>
+            )}
+          </div>
+        )}
 
-          {(actionError || authError) && (
-            <Alert variant="error" className="mt-4">
-              {actionError || authError}
-            </Alert>
-          )}
-
-          <div className="mt-6 space-y-3">
+        <div className="grid w-full max-w-2xl gap-4 md:grid-cols-2">
+          <Card padding="lg">
+            <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.06em] text-arena-text-muted">
+              Host a battle
+            </p>
+            <p className="mb-6 text-[13px] text-arena-text-secondary">
+              Create a room and invite others with your code. Set the battle
+              theme when you start the round.
+            </p>
             <Button
               className="w-full"
               loading={busy === "create" || isLoading}
               onClick={createRoom}
             >
-              Create room
+              Create Room →
             </Button>
+          </Card>
 
-            <div className="relative py-1">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[var(--border)]" />
-              </div>
-              <div className="relative flex justify-center">
-                <span className="bg-[var(--card)] px-2 text-xs text-[var(--muted)]">
-                  or join with code
-                </span>
-              </div>
-            </div>
-
+          <Card padding="lg">
+            <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.06em] text-arena-text-muted">
+              Join a battle
+            </p>
             <Input
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
               placeholder="Room code"
               maxLength={8}
-              className="text-center font-mono tracking-widest"
+              className="mb-4 text-center font-mono tracking-[0.2em]"
             />
             <Button
-              variant="secondary"
               className="w-full"
               loading={busy === "join"}
               onClick={joinRoom}
             >
-              Join room
+              Join Room →
             </Button>
-
             {lastRoom && (
               <Button
                 variant="ghost"
-                className="w-full"
-                onClick={() => router.push(`/room/${lastRoom}`)}
+                className="mt-2 w-full"
+                onClick={() => {
+                  markJoinIntent(lastRoom);
+                  router.push(`/room/${lastRoom}`);
+                }}
               >
                 Rejoin {lastRoom}
               </Button>
             )}
-          </div>
-        </Card>
-
-        <p className="mt-6 text-center text-xs text-[var(--muted)]">
-          API: {API_BASE}
-        </p>
+          </Card>
+        </div>
       </main>
     </div>
   );

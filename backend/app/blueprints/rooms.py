@@ -13,6 +13,7 @@ from app.services.room_service import RoomService
 from app.services.round_service import RoundService
 from app.services.snapshot_service import SnapshotService
 from app.socket_handlers.broadcast import (
+    emit_room_ended,
     emit_round_completed,
     emit_round_locked,
     emit_round_started,
@@ -158,9 +159,7 @@ def rest_start_round(room_id: int):
             "round_id": round_.id,
             "round_number": round_.round_number,
             "battle_theme": round_.battle_theme,
-            "prompt_deadline": round_.prompt_deadline.isoformat()
-            if round_.prompt_deadline
-            else None,
+            "prompt_deadline": round_.to_dict()["prompt_deadline"],
         },
     )
 
@@ -335,6 +334,23 @@ def select_winner(room_id: int, round_id: int):
     )
     snapshot = SnapshotService.build(room_id, viewer_user_id=user_id)
     return jsonify({"round": round_.to_dict(), "snapshot": snapshot})
+
+
+@rooms_bp.post("/id/<int:room_id>/end")
+@jwt_required()
+def rest_end_room(room_id: int):
+    user_id = int(get_jwt_identity())
+    RoomService.get_member_room(room_id, user_id)
+
+    try:
+        room = RoomService.end_room(room_id=room_id, host_user_id=user_id)
+    except AppError:
+        raise
+
+    notify_room_sync(room_id)
+    emit_room_ended(room_id, {"room_id": room.id, "code": room.code})
+    snapshot = SnapshotService.build(room_id, viewer_user_id=user_id)
+    return jsonify({"room": room.to_dict(), "snapshot": snapshot})
 
 
 @rooms_bp.post("/id/<int:room_id>/submissions/<int:submission_id>/retry")

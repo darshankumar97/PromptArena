@@ -55,6 +55,22 @@ def emit_winner_selected(room_id: int, payload: dict) -> None:
     socketio.emit("winner_selected", payload, room=socket_room_name(room_id))
 
 
+def emit_room_ended(room_id: int, payload: dict | None = None) -> None:
+    socketio.emit(
+        "room_ended",
+        payload or {"room_id": room_id},
+        room=socket_room_name(room_id),
+    )
+
+
+def emit_spectator_updated(room_id: int, spectator_count: int) -> None:
+    socketio.emit(
+        "spectator_updated",
+        {"room_id": room_id, "spectator_count": spectator_count},
+        room=socket_room_name(room_id),
+    )
+
+
 def notify_room_sync(room_id: int, *, skip_sid: str | None = None) -> None:
     """Broadcast latest activity row (if any) and a public room snapshot."""
     from app.services.activity_service import ActivityService

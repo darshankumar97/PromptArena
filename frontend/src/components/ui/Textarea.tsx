@@ -7,10 +7,10 @@ export function Textarea({
   return (
     <textarea
       className={cn(
-        "w-full resize-none rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)]",
-        "placeholder:text-[var(--muted)]",
-        "focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        "min-h-[120px] w-full resize-none rounded border border-arena-border bg-arena-surface px-3 py-3 text-[15px] text-arena-text-primary leading-[1.6]",
+        "placeholder:text-arena-text-muted",
+        "focus:border-arena-accent/60 focus:outline-none focus:ring-2 focus:ring-arena-accent/20",
+        "disabled:cursor-not-allowed disabled:opacity-40",
         className,
       )}
       {...props}

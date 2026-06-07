@@ -7,10 +7,10 @@ export function Input({
   return (
     <input
       className={cn(
-        "w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)]",
-        "placeholder:text-[var(--muted)]",
-        "focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        "h-9 w-full rounded border border-arena-border bg-arena-surface px-3 text-[15px] text-arena-text-primary leading-none",
+        "placeholder:text-arena-text-muted",
+        "focus:border-arena-border-strong focus:outline-none focus:ring-2 focus:ring-arena-accent/20",
+        "disabled:cursor-not-allowed disabled:opacity-40",
         className,
       )}
       {...props}

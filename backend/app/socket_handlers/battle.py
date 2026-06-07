@@ -4,12 +4,14 @@ from sqlalchemy import func, select
 
 from app.errors import AppError
 from app.models import Round, Submission
+from app.services.room_service import RoomService
 from app.services.round_service import RoundService
 from app.utils.submission_hooks import schedule_generation_for_submission
 from app.socket_handlers.broadcast import (
     emit_round_completed,
     emit_round_locked,
     emit_round_started,
+    emit_room_ended,
     emit_submission_received,
     notify_room_sync,
 )
@@ -52,9 +54,7 @@ def register_battle_handlers() -> None:
                 "round_id": round_.id,
                 "round_number": round_.round_number,
                 "battle_theme": round_.battle_theme,
-                "prompt_deadline": round_.prompt_deadline.isoformat()
-                if round_.prompt_deadline
-                else None,
+                "prompt_deadline": round_.to_dict()["prompt_deadline"],
             },
         )
         return {"ok": True, "round_id": round_.id}
@@ -116,6 +116,30 @@ def register_battle_handlers() -> None:
             {"round_id": round_.id, "round_number": round_.round_number},
         )
         return {"ok": True, "round_id": round_.id}
+
+    @socketio.on("end_room")
+    def on_end_room(data):
+        user_id = get_socket_user_id()
+        if user_id is None:
+            return _ack_unauthenticated()
+
+        body = data or {}
+        room_id = body.get("room_id")
+        if not room_id:
+            return _validation_error("room_id is required")
+
+        try:
+            room = RoomService.end_room(
+                room_id=int(room_id),
+                host_user_id=user_id,
+            )
+        except (AppError, TypeError) as exc:
+            return _handle_exc(exc)
+
+        room_id_int = int(room_id)
+        notify_room_sync(room_id_int)
+        emit_room_ended(room_id_int, {"room_id": room.id, "code": room.code})
+        return {"ok": True, "room_id": room.id}
 
     @socketio.on("submit_prompt")
     def on_submit_prompt(data):

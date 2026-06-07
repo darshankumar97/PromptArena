@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Card, CardHeader } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Textarea";
 import { api, ApiRequestError } from "@/lib/api";
 import { isSessionExpiredError } from "@/lib/session-expired";
@@ -18,6 +17,7 @@ export function SubmissionForm({
 }: {
   roomId: number;
   roundId: number;
+  deadline?: string | null;
   onSubmitted: () => void;
 }) {
   const token = useAuthStore((s) => s.accessToken);
@@ -48,30 +48,33 @@ export function SubmissionForm({
   };
 
   return (
-    <Card>
-      <CardHeader
-        title="Your prompt"
-        description="One submission per round. AI generation starts after you submit."
-      />
+    <div className="w-full max-w-2xl">
+      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.06em] text-arena-text-muted">
+        Your Prompt
+      </label>
       <Textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        rows={4}
+        className="min-h-[160px]"
         placeholder="Describe the campaign you want the AI to create…"
       />
+      <p className="mt-2 text-right text-[13px] text-arena-text-muted">
+        {prompt.length} characters
+      </p>
       {localError && (
-        <Alert variant="error" className="mt-3">
+        <Alert variant="error" className="mt-4">
           {localError}
         </Alert>
       )}
-      <Button
-        className="mt-4"
-        loading={actionLoading === "submit"}
-        disabled={!prompt.trim()}
-        onClick={submit}
-      >
-        Submit prompt
-      </Button>
-    </Card>
+      <div className="mt-4 flex justify-end">
+        <Button
+          loading={actionLoading === "submit"}
+          disabled={!prompt.trim()}
+          onClick={submit}
+        >
+          Submit Prompt →
+        </Button>
+      </div>
+    </div>
   );
 }

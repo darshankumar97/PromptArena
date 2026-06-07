@@ -73,6 +73,41 @@ UI: http://localhost:3000
 
 **Required locally:** `CORS_ORIGINS` on the backend must include `http://localhost:3000`.
 
+### Optional: Redis + RQ worker
+
+`REDIS_URL` powers session/spectator storage when set. **Generation jobs run in-process by default in local dev** (`python run.py`) — no separate worker required.
+
+To use Redis/RQ for generation (production or testing), set `USE_RQ_QUEUE=1` and run a worker:
+
+```bash
+# Terminal 1 — API
+python run.py
+
+# Terminal 2 — RQ worker (requires REDIS_URL + USE_RQ_QUEUE=1)
+python worker_process.py
+```
+
+Or use Docker Compose from the repo root:
+
+```bash
+docker compose up
+```
+
+### Optional: Gemini AI
+
+Set `GEMINI_API_KEY` in `backend/.env` for theme-aware generation and auto-scoring (`submission.score` + `judge_reason`). Without it, the existing `MockAIProvider` is used.
+
+### Battle history & admin
+
+| Route | Auth | Description |
+|-------|------|-------------|
+| `/battles` | JWT | Your completed battles |
+| `/admin` | JWT + `users.is_admin` | Full battle history + user management |
+
+On first production boot, a bootstrap **Admin** user is created; the JWT is printed once in server logs. Use `/api/battles/admin/grant` to promote other users.
+
+New env vars: `REDIS_URL`, `GEMINI_API_KEY`, `PROMPT_DEADLINE_SECONDS` (default 300s countdown on round start).
+
 ---
 
 ## Production deployment

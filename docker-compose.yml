@@ -1,0 +1,36 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  web:
+    build:
+      context: ./backend
+    command: python run.py
+    ports:
+      - "5000:5000"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      FLASK_ENV: development
+      DATABASE_URL: sqlite:///promptarena.db
+      CORS_ORIGINS: http://localhost:3000
+    depends_on:
+      - redis
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+
+  worker:
+    build:
+      context: ./backend
+    command: python worker_process.py
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      FLASK_ENV: development
+      DATABASE_URL: sqlite:///promptarena.db
+    depends_on:
+      - redis
+    working_dir: /app
+    volumes:
+      - ./backend:/app

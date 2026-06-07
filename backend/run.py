@@ -10,8 +10,6 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-import eventlet
-eventlet.monkey_patch()
 
 _BACKEND_ROOT = Path(__file__).resolve().parent
 os.chdir(_BACKEND_ROOT)
@@ -43,6 +41,11 @@ _require_dependencies()
 
 from app import create_app  # noqa: E402
 from extensions import socketio  # noqa: E402
+
+if os.getenv("SOCKETIO_ASYNC_MODE", "threading") == "eventlet":
+    import eventlet
+
+    eventlet.monkey_patch()
 
 app = create_app()
 
