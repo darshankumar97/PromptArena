@@ -55,12 +55,20 @@ def _init_extensions(app: Flask) -> None:
     if cors_origins:
         CORS(app, resources={r"/api/*": {"origins": cors_origins}}, supports_credentials=True)
 
+    async_mode = app.config.get("SOCKETIO_ASYNC_MODE", "threading")
     socketio.init_app(
         app,
         cors_allowed_origins=cors_origins or "*",
         message_queue=app.config.get("SOCKETIO_MESSAGE_QUEUE"),
-        async_mode=app.config.get("SOCKETIO_ASYNC_MODE", "threading"),
+        async_mode=async_mode,
     )
+    app.logger.info("Flask-SocketIO initialized async_mode=%s", socketio.async_mode)
+    if not app.config.get("TESTING") and async_mode == "threading" and not app.debug:
+        app.logger.warning(
+            "SOCKETIO_ASYNC_MODE=threading in a non-debug app. "
+            "Production (Gunicorn) requires eventlet: "
+            "gunicorn -c gunicorn.conf.py wsgi:app"
+        )
 
     @jwt.expired_token_loader
     def expired_token_callback(_jwt_header, _jwt_payload):

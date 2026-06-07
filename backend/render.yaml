@@ -1,0 +1,17 @@
+# Render Blueprint — backend web service (Socket.IO requires eventlet worker).
+# Dashboard equivalent: set Root Directory to "backend" and use the start command below.
+
+services:
+  - type: web
+    name: promptarena-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -c gunicorn.conf.py wsgi:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SOCKETIO_ASYNC_MODE
+        value: eventlet
+      - key: PYTHON_VERSION
+        value: 3.12.7
